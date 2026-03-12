@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" fill="none">
+  <rect width="1280" height="720" fill="#020817"/>
+  <rect x="48" y="40" width="1184" height="72" rx="14" fill="#0F172A"/>
+  <text x="76" y="84" fill="#F8FAFC" font-family="Segoe UI, Arial" font-size="30" font-weight="700">Calendário Jurídico</text>
+  <rect x="48" y="132" width="1184" height="72" rx="14" fill="#0F172A"/>
+  <text x="76" y="176" fill="#93C5FD" font-family="Segoe UI, Arial" font-size="20">Meus Eventos · Todos · Funcionário</text>
+  <rect x="48" y="224" width="1184" height="448" rx="18" fill="#0F172A"/>
+  <g opacity="0.65">
+    <line x1="48" y1="304" x2="1232" y2="304" stroke="#334155"/>
+    <line x1="48" y1="384" x2="1232" y2="384" stroke="#334155"/>
+    <line x1="48" y1="464" x2="1232" y2="464" stroke="#334155"/>
+    <line x1="48" y1="544" x2="1232" y2="544" stroke="#334155"/>
+    <line x1="217" y1="224" x2="217" y2="672" stroke="#334155"/>
+    <line x1="386" y1="224" x2="386" y2="672" stroke="#334155"/>
+    <line x1="555" y1="224" x2="555" y2="672" stroke="#334155"/>
+    <line x1="724" y1="224" x2="724" y2="672" stroke="#334155"/>
+    <line x1="893" y1="224" x2="893" y2="672" stroke="#334155"/>
+    <line x1="1062" y1="224" x2="1062" y2="672" stroke="#334155"/>
+  </g>
+  <rect x="238" y="332" width="134" height="56" rx="10" fill="#1D4ED8"/>
+  <rect x="574" y="494" width="158" height="56" rx="10" fill="#16A34A"/>
+  <rect x="911" y="414" width="178" height="56" rx="10" fill="#DC2626"/>
+</svg>

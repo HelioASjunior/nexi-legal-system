@@ -1,0 +1,62 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+secrets/
+credentials/
+
+# Python virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Sensitive data dumps and exports
+*.sqlite
+*.sqlite3
+*.db
+*.bak
+*.tmp
+*.xlsx
+*.xls
+*.csv
+
+# Runtime/cache
+.cache/
+.turbo/
+.parcel-cache/
+coverage/
+
+# OS junk
+Thumbs.db
+Desktop.ini

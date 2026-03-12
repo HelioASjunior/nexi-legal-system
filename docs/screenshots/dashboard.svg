@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1280" y2="720" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0B1320"/>
+      <stop offset="1" stop-color="#10243E"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="720" fill="url(#bg)"/>
+  <rect x="48" y="40" width="1184" height="68" rx="14" fill="#152238"/>
+  <text x="76" y="82" fill="#EAF2FF" font-family="Segoe UI, Arial" font-size="28" font-weight="700">CRM Escritório Jurídico · Dashboard</text>
+  <rect x="48" y="132" width="280" height="160" rx="16" fill="#173255"/>
+  <rect x="344" y="132" width="280" height="160" rx="16" fill="#143D35"/>
+  <rect x="640" y="132" width="280" height="160" rx="16" fill="#4A2B2B"/>
+  <rect x="936" y="132" width="296" height="160" rx="16" fill="#3A2B4A"/>
+  <text x="72" y="188" fill="#93C5FD" font-family="Segoe UI, Arial" font-size="18">Clientes Ativos</text>
+  <text x="72" y="242" fill="#F8FAFC" font-family="Segoe UI, Arial" font-size="42" font-weight="700">1.099</text>
+  <text x="368" y="188" fill="#86EFAC" font-family="Segoe UI, Arial" font-size="18">Atendimentos</text>
+  <text x="368" y="242" fill="#F8FAFC" font-family="Segoe UI, Arial" font-size="42" font-weight="700">342</text>
+  <text x="664" y="188" fill="#FCA5A5" font-family="Segoe UI, Arial" font-size="18">Pendências</text>
+  <text x="664" y="242" fill="#F8FAFC" font-family="Segoe UI, Arial" font-size="42" font-weight="700">27</text>
+  <text x="960" y="188" fill="#C4B5FD" font-family="Segoe UI, Arial" font-size="18">Receita (Mês)</text>
+  <text x="960" y="242" fill="#F8FAFC" font-family="Segoe UI, Arial" font-size="42" font-weight="700">R$ 87k</text>
+  <rect x="48" y="314" width="768" height="358" rx="18" fill="#152238"/>
+  <rect x="832" y="314" width="400" height="358" rx="18" fill="#152238"/>
+  <text x="72" y="356" fill="#CBD5E1" font-family="Segoe UI, Arial" font-size="18">Visão geral de produtividade</text>
+  <text x="856" y="356" fill="#CBD5E1" font-family="Segoe UI, Arial" font-size="18">Próximos prazos</text>
+</svg>
