@@ -215,6 +215,3 @@ Mapeamentos comuns de colunas são tratados automaticamente (nome, documento, te
 3. Commit suas alterações.
 4. Abra um Pull Request com descrição clara.
 
-## Licença
-
-Definir licença oficial do projeto (sugestão: MIT para uso amplo, ou licença proprietária para uso interno do escritório).
