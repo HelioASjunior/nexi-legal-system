@@ -347,7 +347,7 @@ export function ClientModal({
             Cancelar
           </Button>
           <Button variant="primary" onClick={handleSubmit}>
-            {client ? 'Salvar Alterações' : 'Criar Cliente'}
+            {client ? 'Salvar Alterações' : 'Criar Lançamento'}
           </Button>
         </div>
       </div>
