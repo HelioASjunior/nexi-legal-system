@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { SearchIcon, UserIcon, PlusIcon } from 'lucide-react';
 import {
   Attendance,
@@ -96,7 +96,7 @@ export function AttendanceModal({
     setClientSearch('');
     setShowClientDropdown(false);
   };
-  const handleSaveNewClient = (clientData: any) => {
+  const handleSaveNewClient = () => {
     // In a real app, this would save to backend and return the new client
     // For now, we'll just close the modal
     setIsClientModalOpen(false);

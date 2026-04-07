@@ -19,7 +19,7 @@
   --glass-border: rgba(255, 255, 255, 0.1);
   --glass-border-hover: rgba(255, 255, 255, 0.15);
   --text-primary: #f0f6fc;
-  --text-secondary: #8b949e;
+  --text-secondary: #a6b0ba;
   --accent-blue: #58a6ff;
   --accent-green: #3fb950;
   --accent-red: #f85149;
@@ -39,7 +39,7 @@
   --glass-border: rgba(0, 0, 0, 0.08);
   --glass-border-hover: rgba(0, 0, 0, 0.15);
   --text-primary: #1f2328;
-  --text-secondary: #656d76;
+  --text-secondary: #4b5563;
   --accent-blue: #0969da;
   --accent-green: #1a7f37;
   --accent-red: #cf222e;
@@ -64,6 +64,37 @@ body {
 #root {
   min-height: 100vh;
 }
+
+/* Bridge Tailwind semantic classes to theme variables (fixes light-theme white text issues). */
+.text-text-primary { color: var(--text-primary) !important; }
+.text-text-secondary { color: var(--text-secondary) !important; }
+
+.login-hero-title,
+.login-hero-subtitle {
+  color: #ffffff !important;
+}
+
+.bg-dark-bg { background-color: var(--dark-bg) !important; }
+.bg-dark-surface { background-color: var(--dark-surface) !important; }
+.border-dark-border { border-color: var(--dark-border) !important; }
+
+.bg-glass-bg { background-color: var(--glass-bg) !important; }
+.border-glass-border { border-color: var(--glass-border) !important; }
+
+.text-accent-blue { color: var(--accent-blue) !important; }
+.text-accent-green { color: var(--accent-green) !important; }
+.text-accent-red { color: var(--accent-red) !important; }
+.text-accent-orange { color: var(--accent-orange) !important; }
+
+.bg-accent-blue { background-color: var(--accent-blue) !important; }
+.bg-accent-green { background-color: var(--accent-green) !important; }
+.bg-accent-red { background-color: var(--accent-red) !important; }
+.bg-accent-orange { background-color: var(--accent-orange) !important; }
+
+.border-accent-blue { border-color: var(--accent-blue) !important; }
+.border-accent-green { border-color: var(--accent-green) !important; }
+.border-accent-red { border-color: var(--accent-red) !important; }
+.border-accent-orange { border-color: var(--accent-orange) !important; }
 /* Glassmorphism utilities */
 .glass {
   background: var(--glass-bg);
@@ -180,6 +211,56 @@ input::placeholder, textarea::placeholder {
 .light .hover\:bg-white\/5:hover { background-color: rgba(0, 0, 0, 0.04) !important; }
 .light .hover\:bg-white\/10:hover { background-color: rgba(0, 0, 0, 0.07) !important; }
 
+/* Light mode: normalize hardcoded purple accents for readable contrast */
+.light .text-purple-300 { color: #7e53c4 !important; }
+.light .text-purple-400 { color: #6f42c1 !important; }
+.light .bg-purple-500\/10 { background-color: rgba(111, 66, 193, 0.12) !important; }
+.light .bg-purple-500\/20 { background-color: rgba(111, 66, 193, 0.18) !important; }
+.light .bg-purple-500\/30 { background-color: rgba(111, 66, 193, 0.24) !important; }
+.light .border-purple-500\/30 { border-color: rgba(111, 66, 193, 0.32) !important; }
+.light .border-purple-500\/50 { border-color: rgba(111, 66, 193, 0.42) !important; }
+
+/* Light mode: normalize other hardcoded accent text colors for readability */
+.light .text-blue-300 { color: #2f6fd6 !important; }
+.light .text-blue-400 { color: #2a63c4 !important; }
+.light .text-green-300 { color: #2c8f52 !important; }
+.light .text-green-400 { color: #2a7f49 !important; }
+.light .text-red-300 { color: #cf3e4e !important; }
+.light .text-red-400 { color: #b42338 !important; }
+.light .text-orange-300 { color: #b0762e !important; }
+.light .text-orange-400 { color: #995f1e !important; }
+.light .text-amber-400 { color: #8c5d00 !important; }
+.light .text-cyan-300 { color: #0e7490 !important; }
+.light .text-cyan-400 { color: #0b728f !important; }
+
+/* Dark mode: strengthen a few muted accent shades */
+.dark .text-amber-400 { color: #f2bf5a !important; }
+.dark .text-orange-400 { color: #f0aa5b !important; }
+.dark .text-cyan-300 { color: #58d1e8 !important; }
+
+/* Charts: force readable labels/ticks/tooltips in both themes */
+.recharts-cartesian-axis-tick-value,
+.recharts-legend-item-text {
+  fill: var(--text-secondary) !important;
+  color: var(--text-secondary) !important;
+}
+
+.recharts-label,
+.recharts-pie-label-text {
+  fill: var(--text-primary) !important;
+}
+
+.recharts-tooltip-wrapper .recharts-default-tooltip {
+  background: var(--dark-surface) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: 10px !important;
+  color: var(--text-primary) !important;
+}
+
+.recharts-tooltip-wrapper .recharts-default-tooltip * {
+  color: var(--text-primary) !important;
+}
+
 /* Light mode: ensure inputs/textareas have visible borders */
 .light input,
 .light textarea,
@@ -191,6 +272,9 @@ input::placeholder, textarea::placeholder {
 .light .text-white\/30 { color: rgba(0, 0, 0, 0.3) !important; }
 .light .text-white\/50 { color: rgba(0, 0, 0, 0.5) !important; }
 .light .text-white\/70 { color: rgba(0, 0, 0, 0.7) !important; }
+.light .text-white\/80 { color: rgba(0, 0, 0, 0.8) !important; }
+.light .text-white\/90 { color: rgba(0, 0, 0, 0.9) !important; }
+.light .text-white { color: var(--text-primary) !important; }
 
 /* Light mode: sidebar and table row separators */
 .light .border-b.border-white\/10 { border-bottom-color: rgba(0, 0, 0, 0.1) !important; }

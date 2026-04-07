@@ -1,5 +1,12 @@
 /**
- * CPF mask: 000.000.000-00
+ * Funções de máscara e validação de campos de formulário brasileiros.
+ * Usadas em inputs controlados para formatar CPF, telefone e CEP em tempo real.
+ */
+
+/**
+ * Aplica máscara de CPF: 000.000.000-00
+ * @param value - String de entrada (pode conter ou não dígitos)
+ * @returns CPF formatado com pontos e hífen
  */
 export function maskCPF(value: string): string {
   const digits = value.replace(/\D/g, '').slice(0, 11);
@@ -10,7 +17,10 @@ export function maskCPF(value: string): string {
 }
 
 /**
- * Phone mask: (00) 00000-0000 or (00) 0000-0000
+ * Aplica máscara de telefone brasileiro: (00) 00000-0000 (celular) ou (00) 0000-0000 (fixo).
+ * Detecta automaticamente o formato com base no comprimento dos dígitos.
+ * @param value - String de entrada
+ * @returns Telefone formatado
  */
 export function maskPhone(value: string): string {
   const digits = value.replace(/\D/g, '').slice(0, 11);
@@ -25,7 +35,9 @@ export function maskPhone(value: string): string {
 }
 
 /**
- * CEP mask: 00000-000
+ * Aplica máscara de CEP: 00000-000
+ * @param value - String de entrada
+ * @returns CEP formatado
  */
 export function maskCEP(value: string): string {
   const digits = value.replace(/\D/g, '').slice(0, 8);
@@ -33,7 +45,10 @@ export function maskCEP(value: string): string {
 }
 
 /**
- * Validate CPF (Brazilian algorithm)
+ * Valida um CPF usando o algoritmo oficial da Receita Federal (dois dígitos verificadores).
+ * Rejeita sequências trivialmente inválidas como "111.111.111-11".
+ * @param cpf - CPF com ou sem máscara
+ * @returns true se o CPF for matematicamente válido
  */
 export function validateCPF(cpf: string): boolean {
   const digits = cpf.replace(/\D/g, '');
@@ -60,7 +75,10 @@ export function validateCPF(cpf: string): boolean {
 }
 
 /**
- * Remove mask characters
+ * Remove todos os caracteres não-numéricos de uma string mascarada.
+ * Útil para persistir apenas os dígitos após o usuário preencher o campo.
+ * @param value - String mascarada
+ * @returns Apenas os dígitos da string
  */
 export function unmask(value: string): string {
   return value.replace(/\D/g, '');

@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import {
   LayoutDashboardIcon,
   UsersIcon,
+  BriefcaseIcon,
   CalendarIcon,
   FileTextIcon,
   MenuIcon,
   XIcon,
-  ScaleIcon,
   DollarSignIcon,
   ShieldIcon,
   LogOutIcon,
@@ -15,10 +15,14 @@ import {
   SunIcon,
   MoonIcon } from
 'lucide-react';
-import { TabType } from '../types';
+import { TabType, type Permission } from '../types';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { useTheme } from '../context/ThemeContext';
 import { hasPermission, ROLE_LABELS } from '../utils/auth';
+import nexilogo from '../../assets/images/nexilogo.png';
+import flagBr from '../../assets/images/flag-br.svg';
+import flagUs from '../../assets/images/flag-us.svg';
 interface SidebarProps {
   activeTab: TabType;
   onTabChange: (tab: TabType) => void;
@@ -27,67 +31,74 @@ interface NavItem {
   id: TabType;
   label: string;
   icon: React.ReactNode;
-  permission?: string;
+  permission?: Permission;
 }
 export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
   const { user, logout } = useAuth();
+  const { language, setLanguage, t } = useLanguage();
   const { theme, toggleTheme } = useTheme();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const navItems: NavItem[] = [
   {
     id: 'dashboard',
-    label: 'Dashboard',
+    label: t('sidebar.dashboard'),
     icon: <LayoutDashboardIcon className="w-5 h-5" />,
     permission: 'dashboard.view'
   },
   {
     id: 'clients_new',
-    label: 'Clientes',
+    label: t('sidebar.clients'),
     icon: <UsersIcon className="w-5 h-5" />,
     permission: 'clients.view'
   },
   {
     id: 'atendimentos',
-    label: 'Atendimentos',
+    label: t('sidebar.attendances'),
     icon: <HeadphonesIcon className="w-5 h-5" />,
     permission: 'atendimentos.view'
   },
   {
+    id: 'process_cases',
+    label: t('sidebar.processCases'),
+    icon: <BriefcaseIcon className="w-5 h-5" />,
+    permission: 'clients.view'
+  },
+  {
     id: 'calendar',
-    label: 'Calendário',
+    label: t('sidebar.calendar'),
     icon: <CalendarIcon className="w-5 h-5" />,
     permission: 'calendar.view'
   },
   {
     id: 'reports',
-    label: 'Relatórios',
+    label: t('sidebar.reports'),
     icon: <FileTextIcon className="w-5 h-5" />,
     permission: 'reports.view'
   },
   {
     id: 'financeiro',
-    label: 'Financeiro',
+    label: t('sidebar.financial'),
     icon: <DollarSignIcon className="w-5 h-5" />,
     permission: 'financeiro.view'
   },
   {
     id: 'admin_roles',
-    label: 'Cargos',
+    label: t('sidebar.roles'),
     icon: <ShieldIcon className="w-5 h-5" />,
     permission: 'admin.roles'
   }];
 
   const visibleNavItems = navItems.filter((item) => {
     if (!item.permission || !user) return true;
-    return hasPermission(user.role, item.permission as any);
+    return hasPermission(user.role, item.permission);
   });
   const handleTabClick = (tab: TabType) => {
     onTabChange(tab);
     setIsMobileOpen(false);
   };
   const handleLogout = () => {
-    if (confirm('Deseja realmente sair do sistema?')) {
-      logout();
+    if (confirm(t('auth.logoutConfirm'))) {
+      void logout();
     }
   };
   return (
@@ -122,15 +133,17 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
         
         <div className="p-6 border-b border-[var(--glass-border)]">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-[var(--accent-blue)]/20 glow-blue">
-              <ScaleIcon className="w-6 h-6 text-[var(--accent-blue)]" />
-            </div>
+            <img
+              src={nexilogo}
+              alt="Nexi Logo"
+              className="w-20 h-20 object-contain shrink-0"
+            />
             <div>
               <h1 className="text-lg font-semibold text-[var(--text-primary)]">
-                Sistema Jurídico
+                {t('sidebar.brand')}
               </h1>
               <p className="text-xs text-[var(--text-secondary)]">
-                Gestão de Escritório
+                {t('sidebar.tagline')}
               </p>
             </div>
           </div>
@@ -175,6 +188,22 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
         </nav>
 
         <div className="p-4 border-t border-[var(--glass-border)] space-y-2">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <button
+              type="button"
+              onClick={() => setLanguage('pt')}
+              className={`flex items-center justify-center rounded-full border px-3 py-2 text-sm transition-all ${language === 'pt' ? 'border-white/40 bg-white/15 text-white' : 'border-white/15 bg-white/5 text-white/80 hover:bg-white/10'}`}
+              aria-label={t('sidebar.language.pt')}>
+              <img src={flagBr} alt="Brasil" className="h-4 w-4 rounded-sm object-cover" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setLanguage('en')}
+              className={`flex items-center justify-center rounded-full border px-3 py-2 text-sm transition-all ${language === 'en' ? 'border-white/40 bg-white/15 text-white' : 'border-white/15 bg-white/5 text-white/80 hover:bg-white/10'}`}
+              aria-label={t('sidebar.language.en')}>
+              <img src={flagUs} alt="United States" className="h-4 w-4 rounded-sm object-cover" />
+            </button>
+          </div>
           {/* Theme Toggle */}
           <button
             onClick={toggleTheme}
@@ -183,12 +212,12 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
             {theme === 'dark' ?
             <>
                 <SunIcon className="w-5 h-5" />
-                <span className="font-medium">Tema Claro</span>
+                <span className="font-medium">{t('auth.theme.light')}</span>
               </> :
 
             <>
                 <MoonIcon className="w-5 h-5" />
-                <span className="font-medium">Tema Escuro</span>
+                <span className="font-medium">{t('auth.theme.dark')}</span>
               </>
             }
           </button>
@@ -199,11 +228,11 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[var(--text-secondary)] hover:text-[var(--accent-red)] hover:bg-[var(--accent-red)]/10 transition-all duration-200">
             
             <LogOutIcon className="w-5 h-5" />
-            <span className="font-medium">Sair</span>
+            <span className="font-medium">{t('auth.logout')}</span>
           </button>
 
           <p className="text-xs text-[var(--text-secondary)] text-center mt-4">
-            v1.0.0 • © 2024
+            v1.0.0 • © 2026
           </p>
         </div>
       </aside>

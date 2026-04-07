@@ -6,16 +6,13 @@ import {
   LegalEventStatus,
   Attachment } from
 '../../types';
-import {
-  mockLegalClients,
-  mockLegalProcesses,
-  mockLegalUsers } from
-'../../data/legalMockData';
 import { getAllUsers } from '../../data/authData';
+import { useData } from '../../context/DataContext';
 import { Modal } from '../Modal';
 import { Input } from '../Input';
 import { Select } from '../Select';
 import { Button } from '../Button';
+import { useLanguage } from '../../context/LanguageContext';
 interface EventModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -38,6 +35,10 @@ const eventTypeOptions = [
 {
   value: 'reuniao',
   label: 'Reunião'
+},
+{
+  value: 'atendimento',
+  label: 'Atendimento'
 },
 {
   value: 'tarefa',
@@ -87,6 +88,8 @@ export function EventModal({
   onSave,
   editingEvent
 }: EventModalProps) {
+  const { t } = useLanguage();
+  const { clientRecords, legalProcesses } = useData();
   const [title, setTitle] = useState('');
   const [type, setType] = useState<LegalEventType>('tarefa');
   const [status, setStatus] = useState<LegalEventStatus>('pendente');
@@ -96,33 +99,125 @@ export function EventModal({
   const [timeStart, setTimeStart] = useState('');
   const [timeEnd, setTimeEnd] = useState('');
   const [clientId, setClientId] = useState('');
+  const [clientSearch, setClientSearch] = useState('');
+  const [showClientSuggestions, setShowClientSuggestions] = useState(false);
   const [processId, setProcessId] = useState('');
+  const [processSearch, setProcessSearch] = useState('');
+  const [showProcessSuggestions, setShowProcessSuggestions] = useState(false);
   const [tribunal, setTribunal] = useState('');
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>(['u1']);
   const [observations, setObservations] = useState('');
   const [alertDaysBefore, setAlertDaysBefore] = useState(3);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
-  // Get all available users (combine system users with legal users)
+
+  // Show only active users registered in the system.
   const availableUsers = useMemo(() => {
-    const authUsers = getAllUsers();
-    // Map auth users to a format compatible with legal users
-    const mappedAuthUsers = authUsers.map((u) => ({
+    return getAllUsers().
+    filter((u) => u.active).
+    map((u) => ({
       id: u.id,
       name: u.name,
       email: u.email
     }));
-    // Combine with mock legal users, avoiding duplicates by name
-    const combined = [...mockLegalUsers];
-    mappedAuthUsers.forEach((au) => {
-      if (!combined.find((u) => u.name === au.name)) {
-        combined.push({
-          ...au,
-          role: 'usuario' as const
-        });
-      }
-    });
-    return combined;
-  }, []);
+  }, [isOpen]);
+
+  const normalizeResponsibleIds = (ids: string[]): string[] => {
+    const validIds = Array.from(new Set(ids)).filter((id) =>
+    availableUsers.some((user) => user.id === id)
+    );
+
+    if (validIds.length > 0) return validIds;
+    return availableUsers.length > 0 ? [availableUsers[0].id] : [];
+  };
+
+  const availableClients = useMemo(() => {
+    return clientRecords.filter((c) => !c.deletedAt && c.status === 'ativo');
+  }, [clientRecords]);
+
+  const availableProcesses = useMemo(() => {
+    if (!clientId) return legalProcesses;
+    return legalProcesses.filter((p) => p.client === clientId);
+  }, [legalProcesses, clientId]);
+
+  const getClientNameById = (id: string) => {
+    return availableClients.find((c) => c.id === id)?.name || '';
+  };
+
+  const getProcessLabel = (process: { number: string; title?: string; description: string }) => {
+    const titleOrDescription = process.title || process.description;
+    if (!titleOrDescription) return process.number;
+    return `${process.number} - ${titleOrDescription}`;
+  };
+
+  const processSuggestions = useMemo(() => {
+    const query = processSearch.trim().toLowerCase();
+    if (!query) return availableProcesses.slice(0, 10);
+    return availableProcesses.filter((p) =>
+    p.number.toLowerCase().includes(query) ||
+    (p.title || '').toLowerCase().includes(query) ||
+    (p.description || '').toLowerCase().includes(query)
+    ).slice(0, 10);
+  }, [availableProcesses, processSearch]);
+
+  const clientSuggestions = useMemo(() => {
+    const query = clientSearch.trim().toLowerCase();
+    if (!query) return availableClients.slice(0, 10);
+    return availableClients.filter((c) =>
+    c.name.toLowerCase().includes(query) ||
+    c.cpf.replace(/\D/g, '').includes(query.replace(/\D/g, ''))
+    ).slice(0, 10);
+  }, [availableClients, clientSearch]);
+
+  const handleClientSearchChange = (value: string) => {
+    const matchedClient = availableClients.find(
+      (c) => c.name.toLowerCase() === value.trim().toLowerCase()
+    );
+
+    setClientSearch(value);
+    setClientId(matchedClient?.id || '');
+    setProcessId('');
+    setProcessSearch('');
+    setShowProcessSuggestions(false);
+
+    if (!matchedClient) {
+      setTribunal('');
+    }
+  };
+
+  const handleClientSelect = (selectedClientId: string) => {
+    const selectedClient = availableClients.find((c) => c.id === selectedClientId);
+    if (!selectedClient) return;
+    setClientId(selectedClient.id);
+    setClientSearch(selectedClient.name);
+    setProcessId('');
+    setProcessSearch('');
+    setShowClientSuggestions(false);
+  };
+
+  const handleProcessSearchChange = (value: string) => {
+    const normalized = value.trim().toLowerCase();
+    const matchedProcess = availableProcesses.find((p) =>
+    getProcessLabel(p).toLowerCase() === normalized
+    );
+
+    setProcessSearch(value);
+    setProcessId(matchedProcess?.id || '');
+    if (matchedProcess?.tribunal) {
+      setTribunal(matchedProcess.tribunal);
+    }
+  };
+
+  const handleProcessSelect = (selectedProcessId: string) => {
+    const selectedProcess = availableProcesses.find((p) => p.id === selectedProcessId);
+    if (!selectedProcess) return;
+    setProcessId(selectedProcess.id);
+    setProcessSearch(getProcessLabel(selectedProcess));
+    if (selectedProcess.tribunal) {
+      setTribunal(selectedProcess.tribunal);
+    }
+    setShowProcessSuggestions(false);
+  };
+
   useEffect(() => {
     if (editingEvent) {
       setTitle(editingEvent.title);
@@ -133,11 +228,19 @@ export function EventModal({
       setAllDay(editingEvent.allDay);
       setTimeStart(editingEvent.timeStart || '');
       setTimeEnd(editingEvent.timeEnd || '');
-      setClientId(editingEvent.clientId || '');
-      setProcessId(editingEvent.processId || '');
+      const nextClientId = editingEvent.clientId || '';
+      const nextProcessId = editingEvent.processId || '';
+      setClientId(nextClientId);
+      setClientSearch(nextClientId ? getClientNameById(nextClientId) : '');
+      setProcessId(nextProcessId);
+      const process = legalProcesses.find((p) => p.id === nextProcessId);
+      setProcessSearch(process ? getProcessLabel(process) : '');
       setTribunal(editingEvent.tribunal || '');
+      const initialIds =
+      editingEvent.responsibleIds ||
+      (editingEvent.responsibleId ? [editingEvent.responsibleId] : []);
       setSelectedUserIds(
-        editingEvent.responsibleIds || [editingEvent.responsibleId]
+        normalizeResponsibleIds(initialIds)
       );
       setObservations(editingEvent.observations || '');
       setAlertDaysBefore(editingEvent.alertDaysBefore);
@@ -153,35 +256,16 @@ export function EventModal({
       setTimeStart('');
       setTimeEnd('');
       setClientId('');
+      setClientSearch('');
       setProcessId('');
+      setProcessSearch('');
       setTribunal('');
-      setSelectedUserIds(['u1']);
+      setSelectedUserIds(availableUsers.length > 0 ? [availableUsers[0].id] : []);
       setObservations('');
       setAlertDaysBefore(3);
       setAttachments([]);
     }
-  }, [editingEvent, isOpen]);
-  const filteredProcesses = useMemo(() => {
-    if (!clientId) return mockLegalProcesses;
-    return mockLegalProcesses.filter((p) => p.client === clientId);
-  }, [clientId]);
-  const handleClientChange = (newClientId: string) => {
-    setClientId(newClientId);
-    setProcessId('');
-    if (newClientId) {
-      const process = mockLegalProcesses.find((p) => p.client === newClientId);
-      if (process) {
-        setTribunal(process.tribunal);
-      }
-    }
-  };
-  const handleProcessChange = (newProcessId: string) => {
-    setProcessId(newProcessId);
-    const process = mockLegalProcesses.find((p) => p.id === newProcessId);
-    if (process) {
-      setTribunal(process.tribunal);
-    }
-  };
+  }, [editingEvent, isOpen, availableUsers, legalProcesses, availableClients]);
   const handleUserToggle = (userId: string) => {
     setSelectedUserIds((prev) => {
       if (prev.includes(userId)) {
@@ -243,32 +327,32 @@ export function EventModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={editingEvent ? 'Editar Evento' : 'Novo Evento'}
+      title={editingEvent ? (t('common.edit') || 'Edit Event') : (t('calendar.newEvent') || 'New Event')}
       size="xl">
       
       <div className="space-y-6">
         {/* Basic Info */}
         <div className="space-y-4">
           <h4 className="text-sm font-medium text-text-secondary">
-            Informações Básicas
+            {t('calendar.basicInfo') || 'Basic Information'}
           </h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-2">
               <Input
-                label="Título"
+                label={t('calendar.eventTitle') || 'Event title'}
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Título do evento" />
+                placeholder={t('calendar.eventTitle') || 'Event title'} />
               
             </div>
             <Select
-              label="Tipo"
+              label={t('calendar.eventType') || 'Event Type'}
               value={type}
               onChange={(e) => setType(e.target.value as LegalEventType)}
               options={eventTypeOptions} />
             
             <Select
-              label="Status"
+              label={t('calendar.status') || 'Status'}
               value={status}
               onChange={(e) => setStatus(e.target.value as LegalEventStatus)}
               options={statusOptions} />
@@ -279,17 +363,17 @@ export function EventModal({
         {/* Dates */}
         <div className="space-y-4">
           <h4 className="text-sm font-medium text-text-secondary">
-            Datas e Horários
+            {t('calendar.datesAndTimes') || 'Dates and Times'}
           </h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
-              label="Data Início"
+              label={t('calendar.startDate') || 'Start Date'}
               type="date"
               value={dateStart}
               onChange={(e) => setDateStart(e.target.value)} />
             
             <Input
-              label="Data Fim"
+              label={t('calendar.endDate') || 'End Date'}
               type="date"
               value={dateEnd}
               onChange={(e) => setDateEnd(e.target.value)} />
@@ -303,19 +387,19 @@ export function EventModal({
               onChange={(e) => setAllDay(e.target.checked)}
               className="w-4 h-4 rounded border-white/20 bg-white/5 text-accent-blue focus:ring-accent-blue/30" />
             
-            <span className="text-sm text-text-primary">Dia inteiro</span>
+            <span className="text-sm text-text-primary">{t('calendar.allDay') || 'All day'}</span>
           </label>
 
           {!allDay &&
           <div className="grid grid-cols-2 gap-4">
               <Input
-              label="Hora Início"
+              label={t('calendar.startTime') || 'Start time'}
               type="time"
               value={timeStart}
               onChange={(e) => setTimeStart(e.target.value)} />
             
               <Input
-              label="Hora Fim"
+              label={t('calendar.endTime') || 'End time'}
               type="time"
               value={timeEnd}
               onChange={(e) => setTimeEnd(e.target.value)} />
@@ -327,44 +411,75 @@ export function EventModal({
         {/* Relations */}
         <div className="space-y-4">
           <h4 className="text-sm font-medium text-text-secondary">
-            Relacionamentos
+            {t('calendar.relations') || 'Relations'}
           </h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Select
-              label="Cliente"
-              value={clientId}
-              onChange={(e) => handleClientChange(e.target.value)}
-              options={[
-              {
-                value: '',
-                label: 'Selecione um cliente'
-              },
-              ...mockLegalClients.map((c) => ({
-                value: c.id,
-                label: c.name
-              }))]
-              } />
-            
-            <Select
-              label="Processo"
-              value={processId}
-              onChange={(e) => handleProcessChange(e.target.value)}
-              options={[
-              {
-                value: '',
-                label: 'Selecione um processo'
-              },
-              ...filteredProcesses.map((p) => ({
-                value: p.id,
-                label: p.number
-              }))]
-              } />
+            <div className="relative">
+              <Input
+                label={t('calendar.client') || 'Client'}
+                value={clientSearch}
+                onChange={(e) => handleClientSearchChange(e.target.value)}
+                onFocus={() => setShowClientSuggestions(true)}
+                onBlur={() => {
+                  setTimeout(() => setShowClientSuggestions(false), 120);
+                }}
+                placeholder={t('calendar.selectClient') || 'Select a client'} />
+
+              {showClientSuggestions && clientSuggestions.length > 0 &&
+              <div className="absolute z-30 mt-2 w-full glass-strong rounded-xl border border-white/10 shadow-lg overflow-hidden">
+                  {clientSuggestions.map((client) =>
+                <button
+                  key={client.id}
+                  type="button"
+                  className="w-full px-3 py-2.5 text-left hover:bg-white/10 transition-colors"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    handleClientSelect(client.id);
+                  }}>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-sm text-text-primary truncate">{client.name}</span>
+                        <span className="text-xs text-text-secondary">{client.cpf}</span>
+                      </div>
+                    </button>
+                )}
+                </div>
+              }
+            </div>
+
+            <div className="relative">
+              <Input
+                label={t('calendar.process') || 'Process'}
+                value={processSearch}
+                onChange={(e) => handleProcessSearchChange(e.target.value)}
+                onFocus={() => setShowProcessSuggestions(true)}
+                onBlur={() => {
+                  setTimeout(() => setShowProcessSuggestions(false), 120);
+                }}
+                placeholder={t('calendar.selectProcess') || 'Select a process'} />
+
+              {showProcessSuggestions && processSuggestions.length > 0 &&
+              <div className="absolute z-30 mt-2 w-full glass-strong rounded-xl border border-white/10 shadow-lg overflow-hidden">
+                  {processSuggestions.map((process) =>
+                <button
+                  key={process.id}
+                  type="button"
+                  className="w-full px-3 py-2.5 text-left hover:bg-white/10 transition-colors"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    handleProcessSelect(process.id);
+                  }}>
+                      <div className="text-sm text-text-primary truncate">{getProcessLabel(process)}</div>
+                    </button>
+                )}
+                </div>
+              }
+            </div>
             
             <Input
-              label="Tribunal"
+              label={t('calendar.court') || 'Court'}
               value={tribunal}
               onChange={(e) => setTribunal(e.target.value)}
-              placeholder="Ex: TJSP, TRT-2" />
+              placeholder={t('calendar.courtPlaceholder') || 'Ex: State Court, Labor Court'} />
             
           </div>
         </div>
@@ -372,7 +487,7 @@ export function EventModal({
         {/* Responsible Users (Multi-select) */}
         <div className="space-y-4">
           <h4 className="text-sm font-medium text-text-secondary">
-            Responsáveis
+            {t('calendar.responsible') || 'Responsible'}
           </h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {availableUsers.map((user) =>
@@ -406,29 +521,29 @@ export function EventModal({
           </div>
           {selectedUserIds.length === 0 &&
           <p className="text-sm text-accent-red">
-              Selecione pelo menos um responsável
+              {t('calendar.selectAtLeastOneResponsible') || 'Select at least one responsible user'}
             </p>
           }
         </div>
 
         {/* Details */}
         <div className="space-y-4">
-          <h4 className="text-sm font-medium text-text-secondary">Detalhes</h4>
+          <h4 className="text-sm font-medium text-text-secondary">{t('calendar.details') || 'Details'}</h4>
           <div>
             <label className="block text-sm font-medium text-text-secondary mb-2">
-              Observações
+              {t('calendar.observations') || 'Notes'}
             </label>
             <textarea
               value={observations}
               onChange={(e) => setObservations(e.target.value)}
-              placeholder="Observações sobre o evento..."
+              placeholder={t('calendar.observationsPlaceholder') || 'Notes about the event...'}
               className="w-full px-4 py-3 rounded-xl glass border border-white/10 text-text-primary placeholder-text-secondary/50 focus:outline-none focus:border-accent-blue/50 resize-none"
               rows={3} />
             
           </div>
 
           <Input
-            label="Alertar com antecedência (dias úteis)"
+            label={t('calendar.alertDaysBefore') || 'Alert in advance (business days)'}
             type="number"
             min={0}
             max={30}
@@ -439,7 +554,7 @@ export function EventModal({
           {/* Attachments */}
           <div>
             <label className="block text-sm font-medium text-text-secondary mb-2">
-              Anexos
+              {t('calendar.attachments') || 'Attachments'}
             </label>
             <div className="space-y-2">
               {attachments.map((att) =>
@@ -474,7 +589,7 @@ export function EventModal({
               <label className="flex items-center justify-center gap-2 p-4 rounded-xl border-2 border-dashed border-white/10 hover:border-accent-blue/50 cursor-pointer transition-colors">
                 <UploadIcon className="w-5 h-5 text-text-secondary" />
                 <span className="text-sm text-text-secondary">
-                  Clique para adicionar arquivos
+                  {t('calendar.clickToAddFiles') || 'Click to add files'}
                 </span>
                 <input
                   type="file"
@@ -491,10 +606,10 @@ export function EventModal({
         {/* Actions */}
         <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
           <Button variant="ghost" onClick={onClose}>
-            Cancelar
+            {t('common.cancel')}
           </Button>
           <Button variant="primary" onClick={handleSubmit}>
-            {editingEvent ? 'Salvar Alterações' : 'Criar Evento'}
+            {editingEvent ? (t('common.save') || 'Save') : (t('calendar.createEvent') || 'Create Event')}
           </Button>
         </div>
       </div>

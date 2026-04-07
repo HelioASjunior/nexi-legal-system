@@ -7,7 +7,7 @@
   </defs>
   <rect width="1280" height="720" fill="url(#bg)"/>
   <rect x="48" y="40" width="1184" height="68" rx="14" fill="#152238"/>
-  <text x="76" y="82" fill="#EAF2FF" font-family="Segoe UI, Arial" font-size="28" font-weight="700">CRM Escritório Jurídico · Dashboard</text>
+  <text x="76" y="82" fill="#EAF2FF" font-family="Segoe UI, Arial" font-size="28" font-weight="700">NeXi Sistema Jurídico · Dashboard</text>
   <rect x="48" y="132" width="280" height="160" rx="16" fill="#173255"/>
   <rect x="344" y="132" width="280" height="160" rx="16" fill="#143D35"/>
   <rect x="640" y="132" width="280" height="160" rx="16" fill="#4A2B2B"/>

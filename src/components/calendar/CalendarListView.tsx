@@ -1,14 +1,16 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { LegalEvent, LegalEventType, LegalEventStatus } from '../../types';
+import { useLanguage } from '../../context/LanguageContext';
+import { getAllUsers } from '../../data/authData';
 import {
   isEventOverdue,
   isEventUrgent,
   formatDateBR } from
 '../../utils/legalDeadlines';
+// TODO: substituir por useData().legalClients / .legalProcesses para exibir dados reais
 import {
   mockLegalClients,
-  mockLegalProcesses,
-  mockLegalUsers } from
+  mockLegalProcesses } from
 '../../data/legalMockData';
 import {
   AlertTriangleIcon,
@@ -44,6 +46,11 @@ const typeColors: Record<
     border: 'border-l-blue-500',
     dot: 'bg-blue-500'
   },
+  atendimento: {
+    bg: 'bg-cyan-500/10',
+    border: 'border-l-cyan-500',
+    dot: 'bg-cyan-500'
+  },
   tarefa: {
     bg: 'bg-orange-500/10',
     border: 'border-l-orange-500',
@@ -51,10 +58,11 @@ const typeColors: Record<
   }
 };
 const typeLabels: Record<LegalEventType, string> = {
-  prazo_processual: 'Prazo Processual',
-  audiencia: 'Audiência',
-  reuniao: 'Reunião',
-  tarefa: 'Tarefa'
+  prazo_processual: 'calendar.type.deadline',
+  audiencia: 'calendar.type.hearing',
+  reuniao: 'calendar.type.meeting',
+  atendimento: 'calendar.type.attendance',
+  tarefa: 'calendar.type.task'
 };
 const statusConfig: Record<
   LegalEventStatus,
@@ -64,15 +72,15 @@ const statusConfig: Record<
   }> =
 {
   pendente: {
-    label: 'Pendente',
+    label: 'common.pending',
     color: 'bg-amber-500/20 text-amber-400'
   },
   concluido: {
-    label: 'Concluído',
+    label: 'common.completed',
     color: 'bg-green-500/20 text-green-400'
   },
   atrasado: {
-    label: 'Atrasado',
+    label: 'common.overdue',
     color: 'bg-red-500/20 text-red-400'
   }
 };
@@ -80,6 +88,14 @@ export function CalendarListView({
   events,
   onEventClick
 }: CalendarListViewProps) {
+  const { t } = useLanguage();
+  const usersById = useMemo(() => {
+    const map = new Map<string, string>();
+    getAllUsers().forEach((u) => {
+      map.set(u.id, u.name);
+    });
+    return map;
+  }, []);
   const groupedEvents = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -94,27 +110,27 @@ export function CalendarListView({
       events: LegalEvent[];
     }[] = [
     {
-      label: 'Atrasados',
+      label: 'calendar.group.overdue',
       events: []
     },
     {
-      label: 'Hoje',
+      label: 'calendar.group.today',
       events: []
     },
     {
-      label: 'Amanhã',
+      label: 'calendar.group.tomorrow',
       events: []
     },
     {
-      label: 'Esta Semana',
+      label: 'calendar.group.thisWeek',
       events: []
     },
     {
-      label: 'Próxima Semana',
+      label: 'calendar.group.nextWeek',
       events: []
     },
     {
-      label: 'Mais Tarde',
+      label: 'calendar.group.later',
       events: []
     }];
 
@@ -149,7 +165,7 @@ export function CalendarListView({
     return mockLegalProcesses.find((p) => p.id === processId)?.number;
   };
   const getUserName = (userId: string) => {
-    return mockLegalUsers.find((u) => u.id === userId)?.name || 'Desconhecido';
+    return usersById.get(userId) || 'Desconhecido';
   };
   const getEffectiveStatus = (event: LegalEvent): LegalEventStatus => {
     if (event.status === 'concluido') return 'concluido';
@@ -160,21 +176,21 @@ export function CalendarListView({
     <div className="space-y-6">
       {groupedEvents.length === 0 ?
       <div className="glass rounded-2xl border border-white/10 p-12 text-center">
-          <p className="text-text-secondary">Nenhum evento encontrado</p>
+          <p className="text-text-secondary">{t('common.notFound')}</p>
         </div> :
 
       groupedEvents.map((group) =>
       <div key={group.label}>
             <h3
-          className={`
+            className={`
               text-sm font-semibold mb-3 flex items-center gap-2
-              ${group.label === 'Atrasados' ? 'text-red-400' : 'text-text-secondary'}
+              ${group.label === 'calendar.group.overdue' ? 'text-red-400' : 'text-text-secondary'}
             `}>
           
-              {group.label === 'Atrasados' &&
+              {group.label === 'calendar.group.overdue' &&
           <AlertTriangleIcon className="w-4 h-4" />
           }
-              {group.label}
+              {t(group.label)}
               <span className="text-xs font-normal">
                 ({group.events.length})
               </span>
@@ -209,7 +225,7 @@ export function CalendarListView({
                           className={`w-2 h-2 rounded-full ${colors.dot}`} />
                         
                             <span className="text-xs text-text-secondary">
-                              {typeLabels[event.type]}
+                              {t(typeLabels[event.type])}
                             </span>
                             <span
                           className={`text-xs px-2 py-0.5 rounded-full ${status.color}`}>
@@ -261,10 +277,10 @@ export function CalendarListView({
                         {/* Responsible */}
                         <div className="text-right">
                           <div className="text-xs text-text-secondary">
-                            Responsável
+                            {t('calendar.responsible')}
                           </div>
                           <div className="text-sm text-text-primary">
-                            {getUserName(event.responsibleId)}
+                            {getUserName((event.responsibleIds && event.responsibleIds[0]) || event.responsibleId)}
                           </div>
                         </div>
                       </div>

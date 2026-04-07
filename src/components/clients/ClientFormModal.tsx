@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ClientRecord, MaritalStatus } from '../../types';
 import { Modal } from '../Modal';
 import { Input } from '../Input';
 import { Select } from '../Select';
 import { Button } from '../Button';
+import { useLanguage } from '../../context/LanguageContext';
 import {
   maskCPF,
   maskPhone,
@@ -172,6 +173,7 @@ export function ClientFormModal({
   onSave,
   editingClient
 }: ClientFormModalProps) {
+  const { t } = useLanguage();
   const [name, setName] = useState('');
   const [cpf, setCpf] = useState('');
   const [rg, setRg] = useState('');
@@ -331,14 +333,14 @@ export function ClientFormModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={editingClient ? 'Editar Cliente' : 'Novo Cliente'}
+      title={editingClient ? `${t('common.edit')} ${t('sidebar.clients')}` : `${t('common.add')} ${t('sidebar.clients')}`}
       size="xl">
       
       <div className="space-y-6">
         {/* Personal Info */}
         <div>
           <h4 className="text-sm font-medium text-text-secondary mb-4">
-            Dados Pessoais
+            {t('clients.personalData') || 'Dados Pessoais'}
           </h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-2">
@@ -395,7 +397,7 @@ export function ClientFormModal({
         {/* Contact Info */}
         <div>
           <h4 className="text-sm font-medium text-text-secondary mb-4">
-            Contato
+            {t('clients.contact') || 'Contato'}
           </h4>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Input
@@ -423,7 +425,7 @@ export function ClientFormModal({
         {/* Address */}
         <div>
           <h4 className="text-sm font-medium text-text-secondary mb-4">
-            Endereço *
+            {t('clients.address') || 'Endereço *'}
           </h4>
           <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
             <div className="md:col-span-2">
@@ -434,7 +436,7 @@ export function ClientFormModal({
                 placeholder="00000-000"
                 error={cepError} />
               {cepLoading && (
-                <p className="mt-1 text-xs text-text-secondary animate-pulse">Buscando endereço...</p>
+                <p className="mt-1 text-xs text-text-secondary animate-pulse">{t('clients.searchingAddress') || 'Buscando endereço...'}</p>
               )}
             </div>
             <div className="md:col-span-4">
@@ -496,12 +498,12 @@ export function ClientFormModal({
         {/* Additional Info */}
         <div>
           <h4 className="text-sm font-medium text-text-secondary mb-4">
-            Informações Adicionais
+            {t('clients.additionalInfo') || 'Informações Adicionais'}
           </h4>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-text-secondary mb-2">
-                Observações
+                {t('clients.notes') || 'Observações'}
               </label>
               <textarea
                 value={observations}
@@ -532,10 +534,10 @@ export function ClientFormModal({
         {/* Actions */}
         <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
           <Button variant="ghost" onClick={onClose}>
-            Cancelar
+            {t('common.cancel')}
           </Button>
           <Button variant="primary" onClick={handleSubmit}>
-            {editingClient ? 'Salvar Alterações' : 'Cadastrar Cliente'}
+            {editingClient ? t('common.save') : `${t('common.add')} ${t('sidebar.clients')}`}
           </Button>
         </div>
       </div>

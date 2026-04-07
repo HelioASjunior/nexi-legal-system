@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   PlusIcon,
   SearchIcon,
@@ -13,7 +13,7 @@ import {
   ClockIcon,
   CheckCircleIcon } from
 'lucide-react';
-import { Attendance, AttendanceStatus, ClientRecord } from '../types';
+import { Attendance, AttendanceLogType, AttendanceStatus, ClientRecord } from '../types';
 import {
   ATTENDANCE_STATUS_CONFIG,
   AREA_OF_LAW_CONFIG } from
@@ -26,6 +26,7 @@ import { Button } from '../components/Button';
 import { Select } from '../components/Select';
 import { AttendanceModal } from '../components/attendances/AttendanceModal';
 import { AttendanceDetailPanel } from '../components/attendances/AttendanceDetailPanel';
+import { useLanguage } from '../context/LanguageContext';
 type ViewMode = 'list' | 'kanban';
 const KANBAN_COLUMNS: AttendanceStatus[] = [
 'novo_contato',
@@ -36,6 +37,7 @@ const KANBAN_COLUMNS: AttendanceStatus[] = [
 'nao_fechado'];
 
 export function AtendimentosPage() {
+  const { t } = useLanguage();
   const { user } = useAuth();
   const { attendances, setAttendances, clientRecords } = useData();
   const [viewMode, setViewMode] = useState<ViewMode>('list');
@@ -55,9 +57,9 @@ export function AtendimentosPage() {
   hasPermission(user.role, 'atendimentos.create') :
   false;
   const canEdit = user ? hasPermission(user.role, 'atendimentos.edit') : false;
-  const getClient = (clientId: string): ClientRecord | undefined => {
+  const getClient = useCallback((clientId: string): ClientRecord | undefined => {
     return clientRecords.find((c) => c.id === clientId);
-  };
+  }, [clientRecords]);
   const filteredAttendances = useMemo(() => {
     return attendances.filter((att) => {
       if (att.deletedAt) return false;
@@ -76,7 +78,7 @@ export function AtendimentosPage() {
       return false;
       return true;
     });
-  }, [attendances, clientRecords, searchTerm, filterStatus, filterResponsible]);
+  }, [attendances, getClient, searchTerm, filterStatus, filterResponsible]);
   const stats = useMemo(() => {
     const total = filteredAttendances.length;
     const fechados = filteredAttendances.filter(
@@ -168,7 +170,7 @@ export function AtendimentosPage() {
   const handleAddLog = (
   attendanceId: string,
   log: {
-    type: string;
+    type: AttendanceLogType;
     description: string;
   }) =>
   {
@@ -177,7 +179,7 @@ export function AtendimentosPage() {
       id: `log-${Date.now()}`,
       attendanceId,
       userId: user?.id || 'unknown',
-      type: log.type as any,
+      type: log.type,
       description: log.description,
       createdAt: now
     };
@@ -226,10 +228,10 @@ export function AtendimentosPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fade-in">
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold text-[var(--text-primary)] mb-1">
-            Atendimentos
+            {t('sidebar.attendances')}
           </h1>
           <p className="text-[var(--text-secondary)]">
-            Gestão de leads e oportunidades
+            {t('attendances.subtitle')}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -256,7 +258,7 @@ export function AtendimentosPage() {
               setIsModalOpen(true);
             }}>
             
-              Novo Atendimento
+              {t('common.add')} {t('sidebar.attendances')}
             </Button>
           }
         </div>
@@ -292,7 +294,7 @@ export function AtendimentosPage() {
                 {stats.emAnalise}
               </div>
               <div className="text-xs text-[var(--text-secondary)]">
-                Em Análise
+                {t('attendances.status.review')}
               </div>
             </div>
           </div>
@@ -307,7 +309,7 @@ export function AtendimentosPage() {
                 {stats.fechados}
               </div>
               <div className="text-xs text-[var(--text-secondary)]">
-                Fechados
+                {t('attendances.status.closed')}
               </div>
             </div>
           </div>
@@ -322,7 +324,7 @@ export function AtendimentosPage() {
                 R$ {(stats.valorTotal / 1000).toFixed(0)}k
               </div>
               <div className="text-xs text-[var(--text-secondary)]">
-                Valor Estimado
+                {t('attendances.estimatedValue')}
               </div>
             </div>
           </div>
@@ -343,7 +345,7 @@ export function AtendimentosPage() {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Buscar por cliente, CPF ou telefone..."
+              placeholder={t('common.search')}
               className="w-full pl-12 pr-4 py-2.5 rounded-xl glass border border-[var(--glass-border)] text-[var(--text-primary)] placeholder-[var(--text-secondary)]/50 focus:outline-none focus:border-[var(--accent-blue)]/50" />
             
           </div>
@@ -352,7 +354,7 @@ export function AtendimentosPage() {
             icon={<FilterIcon className="w-5 h-5" />}
             onClick={() => setShowFilters(!showFilters)}>
             
-            Filtros
+            {t('attendances.filters')}
           </Button>
           {hasActiveFilters &&
           <Button
@@ -367,8 +369,8 @@ export function AtendimentosPage() {
 
         {showFilters &&
         <div className="glass rounded-xl p-4 border border-[var(--glass-border)] grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Select
-            label="Status"
+              <Select
+            label={t('attendances.status.label')}
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
             options={[
@@ -382,8 +384,8 @@ export function AtendimentosPage() {
             }))]
             } />
           
-            <Select
-            label="Responsável"
+              <Select
+            label={t('attendances.responsible')}
             value={filterResponsible}
             onChange={(e) => setFilterResponsible(e.target.value)}
             options={[
@@ -414,22 +416,22 @@ export function AtendimentosPage() {
               <thead>
                 <tr className="border-b border-[var(--glass-border)]">
                   <th className="text-left p-4 text-sm font-medium text-[var(--text-secondary)]">
-                    Cliente
+                    {t('sidebar.clients')}
                   </th>
                   <th className="text-left p-4 text-sm font-medium text-[var(--text-secondary)]">
-                    Área
+                    {t('attendances.area')}
                   </th>
                   <th className="text-left p-4 text-sm font-medium text-[var(--text-secondary)]">
-                    Responsável
+                    {t('attendances.responsible')}
                   </th>
                   <th className="text-left p-4 text-sm font-medium text-[var(--text-secondary)]">
-                    Status
+                    {t('attendances.status.label')}
                   </th>
                   <th className="text-left p-4 text-sm font-medium text-[var(--text-secondary)]">
-                    Valor Est.
+                    {t('attendances.estimatedValue')}
                   </th>
                   <th className="text-left p-4 text-sm font-medium text-[var(--text-secondary)]">
-                    Próx. Contato
+                    {t('attendances.nextContact')}
                   </th>
                 </tr>
               </thead>
@@ -440,7 +442,7 @@ export function AtendimentosPage() {
                   colSpan={6}
                   className="p-8 text-center text-[var(--text-secondary)]">
                   
-                      Nenhum atendimento encontrado
+                      {t('common.notFound')}
                     </td>
                   </tr> :
 

@@ -1,7 +1,15 @@
+/**
+ * Módulo de autenticação e controle de acesso baseado em papéis (RBAC).
+ * Define as permissões de cada cargo, gerencia sessões via sessionStorage e
+ * fornece funções para verificar permissões em tempo de execução.
+ */
 import { AppRole, Permission } from '../types';
+import { fetchAppStateFromDatabase, syncAppStateToDatabase } from '../services/sqliteApi';
 
 /**
- * Role hierarchy and permission definitions
+ * Mapeamento padrão de papéis para suas permissões.
+ * Este valor é a fonte de verdade inicial; pode ser sobrescrito pelo banco de dados
+ * via `hydrateAuthMetaFromDatabase` e `saveCustomPermissions`.
  */
 export const ROLE_PERMISSIONS: Record<AppRole, Permission[]> = {
   administrador: [
@@ -104,22 +112,30 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   'admin.users': 'Gerenciar Usuários'
 };
 
-const CUSTOM_PERMISSIONS_KEY = 'crm_custom_permissions';
+let customPermissionsStore: Record<AppRole, Permission[]> = { ...ROLE_PERMISSIONS };
+let authSessionStore: { userId: string; token: string; timestamp: number } | null = null;
 
-export function getCustomPermissions(): Record<AppRole, Permission[]> {
-  try {
-    const stored = localStorage.getItem(CUSTOM_PERMISSIONS_KEY);
-    if (stored) {
-      return JSON.parse(stored) as Record<AppRole, Permission[]>;
-    }
-  } catch {
-    // ignore
+// Chave usada no sessionStorage do browser (limpo ao fechar a aba).
+const SESSION_STORAGE_KEY = 'crm_jur_session';
+
+export async function hydrateAuthMetaFromDatabase(): Promise<void> {
+  const state = await fetchAppStateFromDatabase();
+
+  if (state.customPermissions && typeof state.customPermissions === 'object') {
+    customPermissionsStore = state.customPermissions as Record<AppRole, Permission[]>;
   }
-  return { ...ROLE_PERMISSIONS };
+
+  // authSession no DB é mantido apenas como fallback legado;
+  // a fonte primária é o sessionStorage (lido em getStoredSession).
 }
 
-export function saveCustomPermissions(perms: Record<AppRole, Permission[]>): void {
-  localStorage.setItem(CUSTOM_PERMISSIONS_KEY, JSON.stringify(perms));
+export function getCustomPermissions(): Record<AppRole, Permission[]> {
+  return customPermissionsStore;
+}
+
+export async function saveCustomPermissions(perms: Record<AppRole, Permission[]>): Promise<void> {
+  customPermissionsStore = perms;
+  await syncAppStateToDatabase({ customPermissions: customPermissionsStore });
 }
 
 /**
@@ -146,43 +162,62 @@ export function getRolePermissions(role: AppRole): Permission[] {
   return getCustomPermissions()[role] || [];
 }
 
-/**
- * Session storage key
- */
-const AUTH_STORAGE_KEY = 'crm_auth_session';
+const SESSION_TTL = 24 * 60 * 60 * 1000; // 24 horas
 
 /**
- * Save auth session to localStorage
+ * Persiste sessão no sessionStorage (primário) e em memória.
+ * sessionStorage é limpo quando a aba é fechada — não persiste entre abas.
  */
-export function saveSession(userId: string, token: string): void {
-  localStorage.setItem(
-    AUTH_STORAGE_KEY,
-    JSON.stringify({ userId, token, timestamp: Date.now() })
-  );
-}
-
-/**
- * Get stored session
- */
-export function getStoredSession(): {userId: string;token: string;} | null {
+export async function saveSession(userId: string, token: string): Promise<void> {
+  const session = { userId, token, timestamp: Date.now() };
+  authSessionStore = session;
   try {
-    const data = localStorage.getItem(AUTH_STORAGE_KEY);
-    if (!data) return null;
-    const parsed = JSON.parse(data);
-    // Session expires after 24 hours
-    if (Date.now() - parsed.timestamp > 24 * 60 * 60 * 1000) {
-      clearSession();
-      return null;
-    }
-    return { userId: parsed.userId, token: parsed.token };
+    sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
   } catch {
-    return null;
+    // sessionStorage indisponível (ex: iframe sandboxed) — prossegue sem.
   }
 }
 
 /**
- * Clear auth session
+ * Recupera sessão ativa. Lê primeiro o sessionStorage (sobrevive a F5),
+ * depois a memória. Retorna null se expirada ou inexistente.
  */
-export function clearSession(): void {
-  localStorage.removeItem(AUTH_STORAGE_KEY);
+export function getStoredSession(): { userId: string; token: string } | null {
+  try {
+    // Prioridade 1: memória (mais rápido)
+    if (authSessionStore) {
+      if (Date.now() - authSessionStore.timestamp > SESSION_TTL) {
+        void clearSession();
+        return null;
+      }
+      return { userId: authSessionStore.userId, token: authSessionStore.token };
+    }
+
+    // Prioridade 2: sessionStorage (sobrevive ao refresh da página)
+    const raw = sessionStorage.getItem(SESSION_STORAGE_KEY);
+    if (raw) {
+      const stored = JSON.parse(raw) as { userId: string; token: string; timestamp: number };
+      if (Date.now() - stored.timestamp < SESSION_TTL) {
+        authSessionStore = stored; // promove para memória
+        return { userId: stored.userId, token: stored.token };
+      }
+      sessionStorage.removeItem(SESSION_STORAGE_KEY);
+    }
+  } catch {
+    // Falha de parse ou sessionStorage bloqueado
+  }
+  return null;
+}
+
+/**
+ * Remove a sessão local (memória + sessionStorage).
+ * O token do servidor deve ser invalidado antes via POST /api/auth/logout.
+ */
+export async function clearSession(): Promise<void> {
+  authSessionStore = null;
+  try {
+    sessionStorage.removeItem(SESSION_STORAGE_KEY);
+  } catch {
+    // sessionStorage indisponível
+  }
 }

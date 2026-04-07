@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   ChevronDownIcon,
   ChevronUpIcon,
@@ -12,6 +12,7 @@ import {
 import { Client, Installment, StatusType } from '../types';
 import { StatusBadge } from './StatusBadge';
 import { Button } from './Button';
+import { useLanguage } from '../context/LanguageContext';
 interface ClientCardProps {
   client: Client;
   onPayInstallment: (clientId: string, installmentId: string) => void;
@@ -48,6 +49,7 @@ export function ClientCard({
   onDeleteClient,
   onViewWhatsAppHistory
 }: ClientCardProps) {
+  const { t } = useLanguage();
   const [isExpanded, setIsExpanded] = useState(false);
   const installmentStats = client.installments.reduce(
     (acc, inst) => {
@@ -97,16 +99,16 @@ export function ClientCard({
             {/* Stats */}
             <div className="hidden sm:flex items-center gap-2 text-sm">
               <span className="px-2 py-1 rounded-lg bg-accent-green/20 text-accent-green">
-                {installmentStats.pago} pagas
+                {installmentStats.pago} {t('common.paid') || 'pagas'}
               </span>
               {installmentStats.atrasado > 0 &&
               <span className="px-2 py-1 rounded-lg bg-accent-red/20 text-accent-red">
-                  {installmentStats.atrasado} atrasadas
+                  {installmentStats.atrasado} {t('common.overdue') || 'atrasadas'}
                 </span>
               }
               {installmentStats.pendente > 0 &&
               <span className="px-2 py-1 rounded-lg bg-accent-orange/20 text-accent-orange">
-                  {installmentStats.pendente} pendentes
+                  {installmentStats.pendente} {t('common.pending') || 'pendentes'}
                 </span>
               }
             </div>
@@ -137,7 +139,7 @@ export function ClientCard({
               onViewWhatsAppHistory(client);
             }}>
             
-              Histórico WhatsApp ({client.whatsappHistory.length})
+              {t('clients.whatsappHistory') || 'Histórico WhatsApp'} ({client.whatsappHistory.length})
             </Button>
             <Button
             variant="ghost"
@@ -148,7 +150,7 @@ export function ClientCard({
               onEditClient(client);
             }}>
             
-              Editar Cliente
+              {t('common.edit')} {t('sidebar.clients')}
             </Button>
             <Button
             variant="danger"
@@ -159,14 +161,14 @@ export function ClientCard({
               onDeleteClient(client.id);
             }}>
             
-              Excluir
+              {t('common.delete')}
             </Button>
           </div>
 
           {/* Installments List */}
           <div className="p-4 space-y-3">
             <h4 className="text-sm font-medium text-text-secondary mb-3">
-              Parcelas
+              {t('clients.installments') || 'Parcelas'}
             </h4>
             {client.installments.map((installment) => {
             const effectiveStatus = getEffectiveStatus(installment);
@@ -183,10 +185,10 @@ export function ClientCard({
                       <span className="font-semibold text-text-primary">
                         {formatCurrency(installment.value)}
                       </span>
-                      <span>Venc: {formatDate(installment.dueDate)}</span>
+                      <span>{t('clients.duePrefix') || 'Venc:'} {formatDate(installment.dueDate)}</span>
                       {installment.paidDate &&
                     <span className="text-accent-green">
-                          Pago em: {formatDate(installment.paidDate)}
+                          {t('clients.paidPrefix') || 'Pago em:'} {formatDate(installment.paidDate)}
                         </span>
                     }
                     </div>
@@ -202,7 +204,7 @@ export function ClientCard({
                         onPayInstallment(client.id, installment.id);
                       }}
                       className="p-2 rounded-lg hover:bg-accent-green/20 text-text-secondary hover:text-accent-green transition-colors"
-                      title="Quitar">
+                      title={t('clients.markPaid') || 'Quitar'}>
                       
                           <CheckIcon className="w-4 h-4" />
                         </button>
@@ -213,7 +215,7 @@ export function ClientCard({
                         onEditInstallment(client.id, installment);
                       }}
                       className="p-2 rounded-lg hover:bg-accent-blue/20 text-text-secondary hover:text-accent-blue transition-colors"
-                      title="Editar">
+                      title={t('common.edit')}>
                       
                         <PencilIcon className="w-4 h-4" />
                       </button>
@@ -223,7 +225,7 @@ export function ClientCard({
                         onDeleteInstallment(client.id, installment.id);
                       }}
                       className="p-2 rounded-lg hover:bg-accent-red/20 text-text-secondary hover:text-accent-red transition-colors"
-                      title="Excluir">
+                      title={t('common.delete')}>
                       
                         <TrashIcon className="w-4 h-4" />
                       </button>

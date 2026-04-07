@@ -1,10 +1,11 @@
-import React from 'react';
 import { ShieldXIcon, ArrowLeftIcon } from 'lucide-react';
 import { Button } from '../components/Button';
+import { useLanguage } from '../context/LanguageContext';
 interface AccessDeniedPageProps {
   onGoBack: () => void;
 }
 export function AccessDeniedPage({ onGoBack }: AccessDeniedPageProps) {
+  const { t } = useLanguage();
   return (
     <div className="min-h-screen w-full flex items-center justify-center p-6">
       <div className="text-center max-w-md animate-fade-in">
@@ -13,17 +14,16 @@ export function AccessDeniedPage({ onGoBack }: AccessDeniedPageProps) {
         </div>
 
         <h1 className="text-3xl font-bold text-text-primary mb-3">
-          Acesso Negado
+          {t('auth.accessDenied.title')}
         </h1>
 
         <p className="text-text-secondary mb-8">
-          Você não tem permissão para acessar esta página. Entre em contato com
-          o administrador se acredita que isso é um erro.
+          {t('auth.accessDenied.description')}
         </p>
 
         <div className="glass rounded-xl p-4 mb-8 border border-white/10">
           <p className="text-sm text-text-secondary">
-            <strong className="text-text-primary">Código de erro:</strong> 403
+            <strong className="text-text-primary">{t('auth.accessDenied.errorCode')}</strong> 403
             Forbidden
           </p>
         </div>
@@ -33,7 +33,7 @@ export function AccessDeniedPage({ onGoBack }: AccessDeniedPageProps) {
           icon={<ArrowLeftIcon className="w-5 h-5" />}
           onClick={onGoBack}>
           
-          Voltar ao Dashboard
+          {t('auth.accessDenied.back')}
         </Button>
       </div>
     </div>);

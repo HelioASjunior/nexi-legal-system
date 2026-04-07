@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ShieldIcon,
   CheckIcon,
@@ -29,6 +29,7 @@ import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { Select } from '../components/Select';
 import { Modal } from '../components/Modal';
+import { useLanguage } from '../context/LanguageContext';
 const allRoles: AppRole[] = [
 'administrador',
 'advogado_total',
@@ -86,6 +87,7 @@ const permissionGroups: {
 
 type ActiveView = 'roles' | 'users';
 export function AdminRolesPage() {
+  const { t } = useLanguage();
   const { user: currentUser } = useAuth();
   const [activeView, setActiveView] = useState<ActiveView>('users');
   const [selectedRole, setSelectedRole] = useState<AppRole>('administrador');
@@ -130,12 +132,12 @@ export function AdminRolesPage() {
       : [...current, permission];
     const next = { ...customPermissions, [selectedRole]: updated };
     setCustomPermissions(next);
-    saveCustomPermissions(next);
+    void saveCustomPermissions(next);
     setPermSaveMsg('Salvo!');
     setTimeout(() => setPermSaveMsg(''), 2000);
   };
   const rolePermissions = customPermissions[selectedRole] || [];
-  const handleCreateUser = () => {
+  const handleCreateUser = async () => {
     setCreateError('');
     setCreateSuccess('');
     if (!newName.trim()) {
@@ -154,7 +156,7 @@ export function AdminRolesPage() {
       setCreateError('Senha deve ter pelo menos 6 caracteres.');
       return;
     }
-    const result = createUser(newName, newEmail, newPassword, newRole);
+    const result = await createUser(newName, newEmail, newPassword, newRole);
     if ('error' in result) {
       setCreateError(result.error);
       return;
@@ -230,10 +232,14 @@ export function AdminRolesPage() {
     updateUserRole(userId, role as AppRole);
     refreshUsers();
   };
-  const handleResetPassword = () => {
+  const handleResetPassword = async () => {
     if (!selectedUserId || !resetPassword.trim()) return;
     if (resetPassword.length < 6) return;
-    resetUserPassword(selectedUserId, resetPassword);
+    const ok = await resetUserPassword(selectedUserId, resetPassword);
+    if (!ok) {
+      alert('Erro ao alterar senha. Tente novamente.');
+      return;
+    }
     setResetSuccess('Senha alterada com sucesso!');
     setResetPassword('');
     setTimeout(() => {
@@ -247,10 +253,10 @@ export function AdminRolesPage() {
       {/* Header */}
       <div className="animate-fade-in">
         <h1 className="text-2xl lg:text-3xl font-bold text-text-primary mb-2">
-          Administração
+          {t('admin.administration') || 'Administração'}
         </h1>
         <p className="text-text-secondary">
-          Gerencie usuários, cargos e permissões do sistema
+          {t('admin.subtitle') || 'Gerencie usuários, cargos e permissões do sistema'}
         </p>
       </div>
 
@@ -266,14 +272,14 @@ export function AdminRolesPage() {
           icon={<UsersIcon className="w-5 h-5" />}
           onClick={() => setActiveView('users')}>
           
-          Usuários
+          {t('admin.users') || 'Usuários'}
         </Button>
         <Button
           variant={activeView === 'roles' ? 'primary' : 'secondary'}
           icon={<ShieldIcon className="w-5 h-5" />}
           onClick={() => setActiveView('roles')}>
           
-          Cargos e Permissões
+          {t('admin.rolesPermissions') || 'Cargos e Permissões'}
         </Button>
       </div>
 
@@ -291,7 +297,7 @@ export function AdminRolesPage() {
               setIsCreateModalOpen(true);
             }}>
             
-              Novo Usuário
+              {t('admin.newUser') || 'Novo Usuário'}
             </Button>
           </div>
 
@@ -302,19 +308,19 @@ export function AdminRolesPage() {
                 <thead>
                   <tr className="border-b border-white/10">
                     <th className="text-left p-4 text-sm font-medium text-text-secondary">
-                      Nome
+                      {t('admin.name') || 'Nome'}
                     </th>
                     <th className="text-left p-4 text-sm font-medium text-text-secondary">
-                      Login / E-mail
+                      {t('admin.loginEmail') || 'Login / E-mail'}
                     </th>
                     <th className="text-left p-4 text-sm font-medium text-text-secondary">
-                      Cargo
+                      {t('admin.role') || 'Cargo'}
                     </th>
                     <th className="text-left p-4 text-sm font-medium text-text-secondary">
-                      Status
+                      {t('admin.status') || 'Status'}
                     </th>
                     <th className="text-right p-4 text-sm font-medium text-text-secondary">
-                      Ações
+                      {t('admin.actions') || 'Ações'}
                     </th>
                   </tr>
                 </thead>
@@ -360,7 +366,7 @@ export function AdminRolesPage() {
                             ${u.active ? 'bg-accent-green/20 text-accent-green' : 'bg-accent-red/20 text-accent-red'}
                           `}>
                       
-                          {u.active ? 'Ativo' : 'Inativo'}
+                          {u.active ? (t('common.active') || 'Ativo') : (t('common.inactive') || 'Inativo')}
                         </span>
                       </td>
                       <td className="p-4">
@@ -368,14 +374,14 @@ export function AdminRolesPage() {
                           <button
                         onClick={() => openEditModal(u)}
                         className="p-2 rounded-lg hover:bg-accent-blue/20 text-text-secondary hover:text-accent-blue transition-colors"
-                        title="Editar usuário">
+                        title={t('common.edit')}>
                         
                             <PencilIcon className="w-4 h-4" />
                           </button>
                           <button
                         onClick={() => handleToggleActive(u.id)}
                         className="p-2 rounded-lg hover:bg-white/10 text-text-secondary hover:text-text-primary transition-colors"
-                        title={u.active ? 'Desativar' : 'Ativar'}>
+                        title={u.active ? (t('admin.deactivate') || 'Desativar') : (t('admin.activate') || 'Ativar')}>
                         
                             {u.active ?
                         <ToggleRightIcon className="w-5 h-5 text-accent-green" /> :
@@ -391,7 +397,7 @@ export function AdminRolesPage() {
                           setIsResetPasswordModalOpen(true);
                         }}
                         className="p-2 rounded-lg hover:bg-accent-blue/20 text-text-secondary hover:text-accent-blue transition-colors"
-                        title="Redefinir senha">
+                        title={t('admin.resetPassword') || 'Redefinir senha'}>
                         
                             <KeyIcon className="w-4 h-4" />
                           </button>
@@ -399,7 +405,7 @@ export function AdminRolesPage() {
                       <button
                         onClick={() => handleDeleteUser(u.id)}
                         className="p-2 rounded-lg hover:bg-accent-red/20 text-text-secondary hover:text-accent-red transition-colors"
-                        title="Excluir usuário">
+                        title={t('common.delete')}>
                         
                               <TrashIcon className="w-4 h-4" />
                             </button>
@@ -513,19 +519,19 @@ export function AdminRolesPage() {
             {/* Role Description */}
             <div className="glass rounded-xl border border-white/10 p-4">
               <h4 className="text-sm font-medium text-text-secondary mb-2">
-                Descrição do Cargo
+                {t('admin.roleDescription') || 'Descrição do Cargo'}
               </h4>
               <p className="text-sm text-text-primary">
                 {selectedRole === 'administrador' &&
-              'Acesso total ao sistema, incluindo gestão de usuários, cargos e módulo financeiro.'}
+              (t('admin.roleDescription.administrator') || 'Acesso total ao sistema, incluindo gestão de usuários, cargos e módulo financeiro.')}
                 {selectedRole === 'advogado_total' &&
-              'Acesso completo exceto ao módulo financeiro e administração de cargos.'}
+              (t('admin.roleDescription.attorneyTotal') || 'Acesso completo exceto ao módulo financeiro e administração de cargos.')}
                 {selectedRole === 'advogado_senior' &&
-              'Pode visualizar e editar clientes, calendário e relatórios. Não pode excluir registros.'}
+              (t('admin.roleDescription.senior') || 'Pode visualizar e editar clientes, calendário e relatórios. Não pode excluir registros.')}
                 {selectedRole === 'advogado_junior' &&
-              'Acesso básico a clientes e calendário. Pode criar eventos mas não pode gerar relatórios.'}
+              (t('admin.roleDescription.junior') || 'Acesso básico a clientes e calendário. Pode criar eventos mas não pode gerar relatórios.')}
                 {selectedRole === 'atendente' &&
-              'Focado em cadastro e edição de clientes. Sem acesso a outras áreas do sistema.'}
+              (t('admin.roleDescription.attendant') || 'Focado em cadastro e edição de clientes. Sem acesso a outras áreas do sistema.')}
               </p>
             </div>
           </div>
@@ -536,7 +542,7 @@ export function AdminRolesPage() {
       <Modal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        title="Novo Usuário"
+        title={t('admin.newUser') || 'Novo Usuário'}
         size="md">
         
         <div className="space-y-4">
@@ -554,20 +560,20 @@ export function AdminRolesPage() {
           }
 
           <Input
-            label="Nome Completo"
+            label={t('admin.fullName') || 'Nome Completo'}
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             placeholder="Nome do usuário" />
           
           <Input
-            label="E-mail / Login"
+            label={t('admin.loginEmail') || 'E-mail / Login'}
             value={newEmail}
             onChange={(e) => setNewEmail(e.target.value)}
             placeholder="email@escritorio.com" />
           
           <div className="space-y-2">
             <label className="block text-sm font-medium text-text-secondary">
-              Senha
+              {t('auth.login.passwordLabel')}
             </label>
             <div className="relative">
               <input
@@ -591,7 +597,7 @@ export function AdminRolesPage() {
             </div>
           </div>
           <Select
-            label="Cargo"
+            label={t('admin.role') || 'Cargo'}
             value={newRole}
             onChange={(e) => setNewRole(e.target.value as AppRole)}
             options={roleOptions} />
@@ -599,10 +605,10 @@ export function AdminRolesPage() {
 
           <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
             <Button variant="ghost" onClick={() => setIsCreateModalOpen(false)}>
-              Cancelar
+              {t('common.cancel')}
             </Button>
             <Button variant="primary" onClick={handleCreateUser}>
-              Criar Usuário
+              {t('admin.createUser') || 'Criar Usuário'}
             </Button>
           </div>
         </div>
@@ -612,7 +618,7 @@ export function AdminRolesPage() {
       <Modal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
-        title="Editar Usuário"
+        title={t('admin.editUser') || 'Editar Usuário'}
         size="md">
         
         <div className="space-y-4">
@@ -630,7 +636,7 @@ export function AdminRolesPage() {
           }
 
           <Input
-            label="Nome Completo"
+            label={t('admin.fullName') || 'Nome Completo'}
             value={editName}
             onChange={(e) => setEditName(e.target.value)}
             placeholder="Nome do usuário" />

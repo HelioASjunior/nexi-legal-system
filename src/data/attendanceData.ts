@@ -1,6 +1,9 @@
-import { Attendance, AttendanceStatus, AreaOfLaw } from '../types';
-
-export const mockAttendances: Attendance[] = [];
+/**
+ * Configurações estáticas dos atendimentos: status, áreas do direito e tipos de log.
+ * Usadas em formulários, colunas de Kanban e painéis de detalhe para mapear
+ * valores internos (snake_case) para rótulos e estilos visuais.
+ */
+import { AttendanceStatus, AreaOfLaw } from '../types';
 
 export const ATTENDANCE_STATUS_CONFIG: Record<
   AttendanceStatus,

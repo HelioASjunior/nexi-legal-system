@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { CalendarIcon, AlertTriangleIcon, CheckCircleIcon } from 'lucide-react';
 import { LegalEvent } from '../../types';
+import { useLanguage } from '../../context/LanguageContext';
 import {
   calculateDeadline,
   calculateAlertDate,
@@ -23,6 +24,7 @@ export function DeadlineCalculator({
   onClose,
   onCreateEvent
 }: DeadlineCalculatorProps) {
+  const { t } = useLanguage();
   const [startDate, setStartDate] = useState(
     new Date().toISOString().split('T')[0]
   );
@@ -79,7 +81,7 @@ export function DeadlineCalculator({
       status: 'pendente',
       alertDaysBefore,
       attachments: [],
-      observations: `Prazo calculado: ${businessDays} dias úteis a partir de ${new Date(calculation.startDate).toLocaleDateString('pt-BR')}`
+      observations: `${t('calendar.calculatedDeadline') || 'Calculated deadline'}: ${businessDays} ${t('calendar.businessDays') || 'business days'} ${t('calendar.from') || 'from'} ${new Date(calculation.startDate).toLocaleDateString('pt-BR')}`
     };
     onCreateEvent(event);
     onClose();
@@ -89,7 +91,7 @@ export function DeadlineCalculator({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Calculadora de Prazos"
+      title={t('calendar.deadlineCalculator') || 'Deadline Calculator'}
       size="md">
       
       <div className="space-y-6">
@@ -97,13 +99,13 @@ export function DeadlineCalculator({
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="Data Inicial"
+              label={t('calendar.startDate') || 'Start Date'}
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)} />
             
             <Input
-              label="Dias Úteis"
+              label={t('calendar.businessDays') || 'Business Days'}
               type="number"
               min={1}
               max={365}
@@ -112,7 +114,7 @@ export function DeadlineCalculator({
             
           </div>
           <Input
-            label="Alertar com antecedência (dias úteis)"
+            label={t('calendar.alertDaysBefore') || 'Alert in advance (business days)'}
             type="number"
             min={0}
             max={30}
@@ -126,13 +128,13 @@ export function DeadlineCalculator({
         <div className="space-y-4">
             <div className="glass-strong rounded-xl p-4 space-y-3">
               <h4 className="text-sm font-medium text-text-secondary">
-                Resultado do Cálculo
+                {t('calendar.result') || 'Calculation Result'}
               </h4>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-3 rounded-lg bg-white/5">
                   <div className="text-xs text-text-secondary mb-1">
-                    Data do Prazo
+                    {t('calendar.deadlineDate') || 'Deadline Date'}
                   </div>
                   <div className="text-lg font-semibold text-red-400 flex items-center gap-2">
                     <CalendarIcon className="w-5 h-5" />
@@ -143,7 +145,7 @@ export function DeadlineCalculator({
                 </div>
                 <div className="p-3 rounded-lg bg-white/5">
                   <div className="text-xs text-text-secondary mb-1">
-                    Data do Alerta
+                    {t('calendar.alertDate') || 'Alert Date'}
                   </div>
                   <div className="text-lg font-semibold text-amber-400 flex items-center gap-2">
                     <AlertTriangleIcon className="w-5 h-5" />
@@ -155,15 +157,15 @@ export function DeadlineCalculator({
               </div>
 
               <div className="flex items-center gap-4 text-sm text-text-secondary">
-                <span>Dias corridos: {calculation.calendarDays}</span>
+                <span>{t('calendar.calendarDays') || 'Calendar days'}: {calculation.calendarDays}</span>
                 <span>•</span>
-                <span>Dias úteis: {calculation.businessDays}</span>
+                <span>{t('calendar.businessDays') || 'Business days'}: {calculation.businessDays}</span>
               </div>
 
               {calculation.holidaysInRange.length > 0 &&
             <div className="pt-3 border-t border-white/10">
                   <div className="text-xs text-text-secondary mb-2">
-                    Feriados no período ({calculation.holidaysInRange.length}):
+                    {t('calendar.holidaysInPeriod') || 'Holidays in period'} ({calculation.holidaysInRange.length}):
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {calculation.holidaysInRange.map((h) =>
@@ -189,13 +191,13 @@ export function DeadlineCalculator({
             {/* Create Event Section */}
             <div className="space-y-3 pt-4 border-t border-white/10">
               <h4 className="text-sm font-medium text-text-secondary">
-                Criar Evento a partir do Cálculo
+                {t('calendar.createFromCalculation') || 'Create Event from Calculation'}
               </h4>
               <Input
-              label="Título do Prazo"
+              label={t('calendar.deadlineTitle') || 'Deadline Title'}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Ex: Contestação - Processo nº..." />
+              placeholder={t('calendar.deadlinePlaceholder') || 'Ex: Response - Case no....'} />
             
               <Button
               variant="primary"
@@ -204,7 +206,7 @@ export function DeadlineCalculator({
               icon={<CheckCircleIcon className="w-4 h-4" />}
               className="w-full">
               
-                Criar Evento de Prazo
+                {t('calendar.createDeadlineEvent') || 'Create Deadline Event'}
               </Button>
             </div>
           </div>
@@ -212,9 +214,7 @@ export function DeadlineCalculator({
 
         {/* Info */}
         <div className="text-xs text-text-secondary bg-white/5 rounded-lg p-3">
-          <strong>Nota:</strong> O cálculo considera apenas dias úteis,
-          excluindo sábados, domingos e feriados nacionais. Para prazos
-          específicos de tribunais, verifique o calendário oficial.
+          <strong>{t('common.note') || 'Note'}:</strong> {t('calendar.deadlineNote') || 'The calculation only considers business days, excluding Saturdays, Sundays and national holidays. For court-specific deadlines, check the official calendar.'}
         </div>
       </div>
     </Modal>);

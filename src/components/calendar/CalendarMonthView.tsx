@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { LegalEvent } from '../../types';
 import { NATIONAL_HOLIDAYS, getHolidayName } from '../../utils/legalDeadlines';
 import { EventCard } from './EventCard';
+import { useLanguage } from '../../context/LanguageContext';
 interface CalendarMonthViewProps {
   currentDate: Date;
   events: LegalEvent[];
@@ -10,7 +11,15 @@ interface CalendarMonthViewProps {
   onEventDrop?: (eventId: string, newDate: Date) => void;
   selectedDate: Date | null;
 }
-const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+const WEEKDAY_KEYS = [
+  'calendar.weekday.sun',
+  'calendar.weekday.mon',
+  'calendar.weekday.tue',
+  'calendar.weekday.wed',
+  'calendar.weekday.thu',
+  'calendar.weekday.fri',
+  'calendar.weekday.sat',
+];
 export function CalendarMonthView({
   currentDate,
   events,
@@ -19,6 +28,7 @@ export function CalendarMonthView({
   onEventDrop,
   selectedDate
 }: CalendarMonthViewProps) {
+  const { t } = useLanguage();
   const [dragOverDate, setDragOverDate] = useState<string | null>(null);
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -113,12 +123,12 @@ export function CalendarMonthView({
     <div className="glass rounded-2xl border border-white/10 overflow-hidden">
       {/* Weekday Headers */}
       <div className="grid grid-cols-7 border-b border-white/10">
-        {WEEKDAYS.map((day, index) =>
+        {WEEKDAY_KEYS.map((dayKey, index) =>
         <div
-          key={day}
+          key={dayKey}
           className={`p-3 text-center text-sm font-medium ${index === 0 || index === 6 ? 'text-text-secondary/70 bg-white/[0.02]' : 'text-text-secondary'}`}>
           
-            {day}
+            {t(dayKey)}
           </div>
         )}
       </div>
@@ -133,7 +143,6 @@ export function CalendarMonthView({
           return (
             <div
               key={index}
-              onClick={() => onDayClick(dayInfo.date)}
               onDragOver={(e) => handleDragOver(e, dayInfo.date)}
               onDragLeave={handleDragLeave}
               onDrop={(e) => handleDrop(e, dayInfo.date)}
@@ -148,8 +157,13 @@ export function CalendarMonthView({
               
               <div className="flex items-start justify-between mb-1">
                 <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDayClick(dayInfo.date);
+                  }}
                   className={`
                     inline-flex items-center justify-center w-7 h-7 rounded-full text-sm
+                    cursor-pointer hover:bg-white/10
                     ${isToday(dayInfo.date) ? 'bg-accent-blue text-white font-semibold' : 'text-text-primary'}
                     ${isSelected(dayInfo.date) && !isToday(dayInfo.date) ? 'ring-2 ring-accent-blue/50' : ''}
                   `}>
@@ -183,7 +197,7 @@ export function CalendarMonthView({
                 )}
                 {dayEvents.length > 3 &&
                 <div className="text-xs text-text-secondary pl-1">
-                    +{dayEvents.length - 3} mais
+                    +{dayEvents.length - 3} {t('common.more') || 'more'}
                   </div>
                 }
               </div>

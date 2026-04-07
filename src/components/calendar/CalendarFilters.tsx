@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { ChevronDownIcon, ChevronUpIcon, XIcon } from 'lucide-react';
 import {
   LegalEventType,
@@ -9,6 +9,7 @@ import {
 '../../types';
 import { Button } from '../Button';
 import { Select } from '../Select';
+import { useLanguage } from '../../context/LanguageContext';
 export interface CalendarFiltersState {
   types: LegalEventType[];
   statuses: LegalEventStatus[];
@@ -27,12 +28,14 @@ const eventTypeLabels: Record<LegalEventType, string> = {
   prazo_processual: 'Prazo Processual',
   audiencia: 'Audiência',
   reuniao: 'Reunião',
+  atendimento: 'Atendimento',
   tarefa: 'Tarefa'
 };
 const eventTypeColors: Record<LegalEventType, string> = {
   prazo_processual: 'bg-red-500',
   audiencia: 'bg-purple-500',
   reuniao: 'bg-blue-500',
+  atendimento: 'bg-cyan-500',
   tarefa: 'bg-orange-500'
 };
 const statusLabels: Record<LegalEventStatus, string> = {
@@ -52,6 +55,7 @@ export function CalendarFilters({
   processes,
   users
 }: CalendarFiltersProps) {
+  const { t } = useLanguage();
   const [isExpanded, setIsExpanded] = useState(false);
   const activeFilterCount =
   filters.types.length +
@@ -96,10 +100,10 @@ export function CalendarFilters({
         className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors">
         
         <div className="flex items-center gap-3">
-          <span className="font-medium text-text-primary">Filtros</span>
+          <span className="font-medium text-text-primary">{t('calendar.filters') || 'Filtros'}</span>
           {activeFilterCount > 0 &&
           <span className="px-2 py-0.5 rounded-full bg-accent-blue/20 text-accent-blue text-xs font-medium">
-              {activeFilterCount} ativo{activeFilterCount > 1 ? 's' : ''}
+              {activeFilterCount} {t('common.active') || 'ativo'}{activeFilterCount > 1 ? 's' : ''}
             </span>
           }
         </div>
@@ -115,7 +119,7 @@ export function CalendarFilters({
           {/* Event Types */}
           <div>
             <label className="block text-sm font-medium text-text-secondary mb-2">
-              Tipo de Evento
+              {t('calendar.eventType') || 'Tipo de Evento'}
             </label>
             <div className="flex flex-wrap gap-2">
               {(Object.keys(eventTypeLabels) as LegalEventType[]).map(
@@ -142,7 +146,7 @@ export function CalendarFilters({
           {/* Status */}
           <div>
             <label className="block text-sm font-medium text-text-secondary mb-2">
-              Status
+              {t('calendar.status') || 'Status'}
             </label>
             <div className="flex flex-wrap gap-2">
               {(Object.keys(statusLabels) as LegalEventStatus[]).map(
@@ -169,7 +173,7 @@ export function CalendarFilters({
           {/* Dropdowns */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Select
-            label="Cliente"
+            label={t('calendar.client') || 'Cliente'}
             value={filters.clientId}
             onChange={(e) =>
             onFilterChange({
@@ -181,7 +185,7 @@ export function CalendarFilters({
             options={[
             {
               value: '',
-              label: 'Todos os clientes'
+              label: t('calendar.allClients') || 'Todos os clientes'
             },
             ...clients.map((c) => ({
               value: c.id,
@@ -190,7 +194,7 @@ export function CalendarFilters({
             } />
           
             <Select
-            label="Processo"
+            label={t('calendar.process') || 'Processo'}
             value={filters.processId}
             onChange={(e) =>
             onFilterChange({
@@ -201,7 +205,7 @@ export function CalendarFilters({
             options={[
             {
               value: '',
-              label: 'Todos os processos'
+              label: t('calendar.allProcesses') || 'Todos os processos'
             },
             ...filteredProcesses.map((p) => ({
               value: p.id,
@@ -210,7 +214,7 @@ export function CalendarFilters({
             } />
           
             <Select
-            label="Responsável"
+            label={t('calendar.responsible') || 'Responsável'}
             value={filters.responsibleId}
             onChange={(e) =>
             onFilterChange({
@@ -221,7 +225,7 @@ export function CalendarFilters({
             options={[
             {
               value: '',
-              label: 'Todos os responsáveis'
+              label: t('calendar.allResponsible') || 'Todos os responsáveis'
             },
             ...users.map((u) => ({
               value: u.id,
@@ -240,7 +244,7 @@ export function CalendarFilters({
             icon={<XIcon className="w-4 h-4" />}
             onClick={clearFilters}>
             
-                Limpar Filtros
+                {t('common.clearFilters')}
               </Button>
             </div>
         }

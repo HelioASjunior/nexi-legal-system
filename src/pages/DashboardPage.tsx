@@ -1,7 +1,6 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import {
   TrendingDownIcon,
-  AlertTriangleIcon,
   TrendingUpIcon,
   UsersIcon,
   CalendarIcon,
@@ -22,45 +21,49 @@ import {
 'recharts';
 import { MetricCard } from '../components/MetricCard';
 import { useData } from '../context/DataContext';
+import { useLanguage } from '../context/LanguageContext';
 export function DashboardPage() {
-  const { financialClients, clientRecords, attendances, legalEvents } =
+  const { t } = useLanguage();
+  const { financialMovements, clientRecords, attendances, legalEvents } =
   useData();
   // Calculate metrics from real data
   const metrics = useMemo(() => {
-    let totalInadimplente = 0;
-    let clientesEmAtraso = 0;
-    let previsaoRecebimento = 0;
-    let parcelasPagas = 0;
-    let parcelasAtrasadas = 0;
-    let parcelasPendentes = 0;
+    let totalReceived = 0;
+    let totalOverdue = 0;
+    let totalPending = 0;
+    let paidCount = 0;
+    let overdueCount = 0;
+    let pendingCount = 0;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    financialClients.forEach((client) => {
-      let clientHasOverdue = false;
-      client.installments.forEach((inst) => {
-        if (inst.status === 'pago') {
-          parcelasPagas++;
-        } else if (
-        inst.status === 'atrasado' ||
-        inst.status === 'pendente' && new Date(inst.dueDate) < today)
-        {
-          parcelasAtrasadas++;
-          totalInadimplente += inst.value;
-          clientHasOverdue = true;
-        } else {
-          parcelasPendentes++;
-          previsaoRecebimento += inst.value;
-        }
-      });
-      if (clientHasOverdue) clientesEmAtraso++;
+    const counterpartiesWithOverdue = new Set<string>();
+
+    financialMovements.forEach((movement) => {
+      const signal = movement.direction === 'entrada' ? 1 : -1;
+      const value = movement.amount * signal;
+      const movementDate = new Date(`${movement.receivedAt}T12:00:00`);
+
+      if (movement.status === 'recebida') {
+        totalReceived += value;
+        paidCount++;
+      } else if (movementDate < today) {
+        totalOverdue += value;
+        overdueCount++;
+        counterpartiesWithOverdue.add(movement.receivedFrom.toLowerCase().trim());
+      } else {
+        totalPending += value;
+        pendingCount++;
+      }
     });
+
     return {
-      totalInadimplente,
-      clientesEmAtraso,
-      previsaoRecebimento,
-      parcelasPagas,
-      parcelasAtrasadas,
-      parcelasPendentes,
+      totalReceived,
+      totalInadimplente: totalOverdue,
+      clientesEmAtraso: counterpartiesWithOverdue.size,
+      previsaoRecebimento: totalPending,
+      parcelasPagas: paidCount,
+      parcelasAtrasadas: overdueCount,
+      parcelasPendentes: pendingCount,
       clientesAtivos: clientRecords.filter(
         (c) => c.status === 'ativo' && !c.deletedAt
       ).length,
@@ -76,28 +79,28 @@ export function DashboardPage() {
         return eventDate >= today && eventDate <= nextWeek;
       }).length
     };
-  }, [financialClients, clientRecords, attendances, legalEvents]);
+  }, [financialMovements, clientRecords, attendances, legalEvents]);
   // Chart data
   const statusComposition = useMemo(
     () =>
     [
     {
-      name: 'Pago',
+      name: t('dashboard.chart.paid') || 'Paid',
       value: metrics.parcelasPagas,
       color: 'var(--accent-green)'
     },
     {
-      name: 'Atrasado',
+      name: t('dashboard.chart.overdue') || 'Overdue',
       value: metrics.parcelasAtrasadas,
       color: 'var(--accent-red)'
     },
     {
-      name: 'Pendente',
+      name: t('dashboard.chart.pending') || 'Pending',
       value: metrics.parcelasPendentes,
       color: 'var(--accent-orange)'
     }].
     filter((item) => item.value > 0),
-    [metrics]
+    [metrics, t]
   );
   const monthlyData = useMemo(() => {
     const data: Record<
@@ -109,44 +112,43 @@ export function DashboardPage() {
       }> =
     {};
     const monthNames = [
-    'Jan',
-    'Fev',
-    'Mar',
-    'Abr',
-    'Mai',
-    'Jun',
-    'Jul',
-    'Ago',
-    'Set',
-    'Out',
-    'Nov',
-    'Dez'];
+    t('dashboard.month.jan') || 'Jan',
+    t('dashboard.month.feb') || 'Feb',
+    t('dashboard.month.mar') || 'Mar',
+    t('dashboard.month.apr') || 'Apr',
+    t('dashboard.month.may') || 'May',
+    t('dashboard.month.jun') || 'Jun',
+    t('dashboard.month.jul') || 'Jul',
+    t('dashboard.month.aug') || 'Aug',
+    t('dashboard.month.sep') || 'Sep',
+    t('dashboard.month.oct') || 'Oct',
+    t('dashboard.month.nov') || 'Nov',
+    t('dashboard.month.dec') || 'Dec'];
 
     const today = new Date();
-    financialClients.forEach((client) => {
-      client.installments.forEach((inst) => {
-        const date = new Date(inst.dueDate);
-        const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
-        const monthLabel = monthNames[date.getMonth()];
-        if (!data[monthKey]) {
-          data[monthKey] = {
-            month: monthLabel,
-            recebido: 0,
-            inadimplente: 0
-          };
-        }
-        if (inst.status === 'pago') {
-          data[monthKey].recebido += inst.value;
-        } else if (
-        inst.status === 'atrasado' ||
-        inst.status === 'pendente' && new Date(inst.dueDate) < today)
-        {
-          data[monthKey].inadimplente += inst.value;
-        }
-      });
+    financialMovements.forEach((movement) => {
+      const date = new Date(`${movement.receivedAt}T12:00:00`);
+      const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
+      const monthLabel = monthNames[date.getMonth()];
+      const signal = movement.direction === 'entrada' ? 1 : -1;
+      const value = movement.amount * signal;
+
+      if (!data[monthKey]) {
+        data[monthKey] = {
+          month: monthLabel,
+          recebido: 0,
+          inadimplente: 0
+        };
+      }
+
+      if (movement.status === 'recebida') {
+        data[monthKey].recebido += value;
+      } else if (date < today) {
+        data[monthKey].inadimplente += value;
+      }
     });
     return Object.values(data).slice(-6);
-  }, [financialClients]);
+  }, [financialMovements]);
   const formatCurrency = (value: number) => {
     if (value >= 1000) {
       return `R$ ${(value / 1000).toFixed(1)}k`;
@@ -156,7 +158,7 @@ export function DashboardPage() {
     })}`;
   };
   const hasData =
-  financialClients.length > 0 ||
+  financialMovements.length > 0 ||
   clientRecords.length > 0 ||
   attendances.length > 0 ||
   legalEvents.length > 0;
@@ -165,17 +167,17 @@ export function DashboardPage() {
       {/* Header */}
       <div className="animate-fade-in">
         <h1 className="text-2xl lg:text-3xl font-bold text-[var(--text-primary)] mb-2">
-          Dashboard
+          {t('dashboard.title')}
         </h1>
         <p className="text-[var(--text-secondary)]">
-          Visão geral da sua carteira de cobrança
+          {t('dashboard.subtitle')}
         </p>
       </div>
 
       {/* Metrics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <MetricCard
-          title="Total Inadimplente"
+          title={t('dashboard.metric.overdue')}
           value={formatCurrency(metrics.totalInadimplente)}
           icon={<TrendingDownIcon className="w-6 h-6" />}
           glowColor="red"
@@ -183,18 +185,18 @@ export function DashboardPage() {
           delay={100} />
         
         <MetricCard
-          title="Clientes em Atraso"
-          value={metrics.clientesEmAtraso.toString()}
-          icon={<AlertTriangleIcon className="w-6 h-6" />}
+          title={t('dashboard.metric.pending')}
+          value={formatCurrency(metrics.previsaoRecebimento)}
+          icon={<CalendarIcon className="w-6 h-6" />}
           glowColor="orange"
           delay={200} />
         
         <MetricCard
-          title="Previsão de Recebimento"
-          value={formatCurrency(metrics.previsaoRecebimento)}
+          title={t('dashboard.metric.received')}
+          value={formatCurrency(metrics.totalReceived)}
           icon={<TrendingUpIcon className="w-6 h-6" />}
           glowColor="green"
-          trend={metrics.previsaoRecebimento > 0 ? 'up' : undefined}
+          trend={metrics.totalReceived !== 0 ? 'up' : undefined}
           delay={300} />
         
       </div>
@@ -209,7 +211,7 @@ export function DashboardPage() {
           }}>
           
           <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-6">
-            Composição de Status
+            {t('dashboard.chart.status')}
           </h3>
           <div className="h-64">
             {statusComposition.length > 0 ?
@@ -251,8 +253,8 @@ export function DashboardPage() {
               </ResponsiveContainer> :
 
             <div className="h-full flex items-center justify-center">
-                <p className="text-[var(--text-secondary)]">
-                  Nenhuma parcela cadastrada
+                  <p className="text-[var(--text-secondary)]">
+                  {t('common.notFound')}
                 </p>
               </div>
             }
@@ -267,7 +269,7 @@ export function DashboardPage() {
           }}>
           
           <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-6">
-            Recebimentos vs Inadimplência
+            {t('dashboard.chart.monthlyComparison') || 'Receipts vs Overdue'}
           </h3>
           <div className="h-64">
             {monthlyData.length > 0 ?
@@ -314,7 +316,7 @@ export function DashboardPage() {
                   height={36}
                   formatter={(value) =>
                   <span className="text-[var(--text-secondary)] text-sm">
-                        {value === 'recebido' ? 'Recebido' : 'Inadimplente'}
+                          {value === 'recebido' ? (t('dashboard.chart.received') || 'Received') : (t('dashboard.chart.delinquent') || 'Overdue')}
                       </span>
                   } />
                 
@@ -332,8 +334,8 @@ export function DashboardPage() {
               </ResponsiveContainer> :
 
             <div className="h-full flex items-center justify-center">
-                <p className="text-[var(--text-secondary)]">
-                  Nenhum dado financeiro cadastrado
+                  <p className="text-[var(--text-secondary)]">
+                  {t('dashboard.emptyFinancial')}
                 </p>
               </div>
             }
@@ -349,7 +351,7 @@ export function DashboardPage() {
         }}>
         
         <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-4">
-          Resumo Rápido
+          {t('dashboard.title')}
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="text-center p-4 rounded-xl bg-[var(--glass-bg)]">
@@ -357,7 +359,7 @@ export function DashboardPage() {
               {metrics.parcelasPagas}
             </p>
             <p className="text-sm text-[var(--text-secondary)]">
-              Parcelas Pagas
+              {t('reports.receipts')}
             </p>
           </div>
           <div className="text-center p-4 rounded-xl bg-[var(--glass-bg)]">
@@ -365,7 +367,7 @@ export function DashboardPage() {
               {metrics.parcelasAtrasadas}
             </p>
             <p className="text-sm text-[var(--text-secondary)]">
-              Parcelas Atrasadas
+              {t('reports.overdue')}
             </p>
           </div>
           <div className="text-center p-4 rounded-xl bg-[var(--glass-bg)]">
@@ -373,7 +375,7 @@ export function DashboardPage() {
               {metrics.parcelasPendentes}
             </p>
             <p className="text-sm text-[var(--text-secondary)]">
-              Parcelas Pendentes
+              {t('dashboard.metric.pending')}
             </p>
           </div>
           <div className="text-center p-4 rounded-xl bg-[var(--glass-bg)]">
@@ -381,7 +383,7 @@ export function DashboardPage() {
               {metrics.clientesAtivos}
             </p>
             <p className="text-sm text-[var(--text-secondary)]">
-              Clientes Ativos
+              {t('dashboard.metric.activeClients')}
             </p>
           </div>
         </div>
@@ -404,7 +406,7 @@ export function DashboardPage() {
                 {metrics.clientesAtivos}
               </p>
               <p className="text-xs text-[var(--text-secondary)]">
-                Clientes Cadastrados
+                {t('dashboard.metric.registeredClients')}
               </p>
             </div>
           </div>
@@ -419,7 +421,7 @@ export function DashboardPage() {
                 {metrics.atendimentosAbertos}
               </p>
               <p className="text-xs text-[var(--text-secondary)]">
-                Atendimentos Abertos
+                {t('dashboard.metric.openAttendances')}
               </p>
             </div>
           </div>
@@ -434,7 +436,7 @@ export function DashboardPage() {
                 {metrics.eventosProximos}
               </p>
               <p className="text-xs text-[var(--text-secondary)]">
-                Eventos Esta Semana
+                {t('dashboard.metric.upcomingEvents')}
               </p>
             </div>
           </div>
@@ -453,11 +455,10 @@ export function DashboardPage() {
             <TrendingUpIcon className="w-8 h-8 text-[var(--accent-blue)]" />
           </div>
           <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
-            Comece a usar o sistema
+            {t('dashboard.emptyPrompt')}
           </h3>
           <p className="text-[var(--text-secondary)] max-w-md mx-auto">
-            Cadastre clientes, atendimentos e eventos no calendário para ver as
-            métricas e gráficos atualizados automaticamente.
+            {t('dashboard.emptyPrompt')}
           </p>
         </div>
       }

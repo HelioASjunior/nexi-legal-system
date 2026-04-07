@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Installment, StatusType } from '../types';
 import { Modal } from './Modal';
 import { Input } from './Input';
 import { Select } from './Select';
 import { Button } from './Button';
+import { useLanguage } from '../context/LanguageContext';
 interface InstallmentModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -32,6 +33,7 @@ export function InstallmentModal({
   clientId,
   installment
 }: InstallmentModalProps) {
+  const { t } = useLanguage();
   const [description, setDescription] = useState('');
   const [value, setValue] = useState('');
   const [dueDate, setDueDate] = useState('');
@@ -71,26 +73,26 @@ export function InstallmentModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={installment ? 'Editar Parcela' : 'Nova Parcela'}
+    title={installment ? (t('common.edit') + ' ' + (t('clients.installment') || 'Parcela')) : (t('common.add') + ' ' + (t('clients.installment') || 'Parcela'))}
       size="md">
       
       <div className="space-y-4">
         <Input
-          label="Descrição"
+          label={t('clients.description') || 'Descrição'}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Ex: Parcela 1/12 - Empréstimo" />
         
         <div className="grid grid-cols-2 gap-4">
           <Input
-            label="Valor (R$)"
+            label={t('clients.value') || 'Valor (R$)'}
             type="number"
             value={value}
             onChange={(e) => setValue(e.target.value)}
             placeholder="0,00" />
           
           <Input
-            label="Vencimento"
+            label={t('clients.dueDate') || 'Vencimento'}
             type="date"
             value={dueDate}
             onChange={(e) => setDueDate(e.target.value)} />
@@ -98,14 +100,14 @@ export function InstallmentModal({
         </div>
         <div className="grid grid-cols-2 gap-4">
           <Select
-            label="Status"
+            label={t('common.status') || 'Status'}
             value={status}
             onChange={(e) => setStatus(e.target.value as StatusType)}
             options={statusOptions} />
           
           {status === 'pago' &&
           <Input
-            label="Data do Pagamento"
+            label={t('clients.paymentDate') || 'Data do Pagamento'}
             type="date"
             value={paidDate}
             onChange={(e) => setPaidDate(e.target.value)} />
@@ -115,10 +117,10 @@ export function InstallmentModal({
 
         <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
           <Button variant="ghost" onClick={onClose}>
-            Cancelar
+            {t('common.cancel')}
           </Button>
           <Button variant="primary" onClick={handleSubmit}>
-            Salvar
+            {t('common.save')}
           </Button>
         </div>
       </div>

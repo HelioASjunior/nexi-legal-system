@@ -1,12 +1,12 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { LegalEvent, LegalEventType } from '../../types';
+import { useLanguage } from '../../context/LanguageContext';
 import {
   NATIONAL_HOLIDAYS,
-  getHolidayName,
-  formatDateBR } from
+  getHolidayName } from
 '../../utils/legalDeadlines';
+// TODO: substituir por useData().legalClients para exibir dados reais do banco
 import { mockLegalClients } from '../../data/legalMockData';
-import { EventCard } from './EventCard';
 interface CalendarDayViewProps {
   currentDate: Date;
   events: LegalEvent[];
@@ -22,19 +22,22 @@ const typeColors: Record<LegalEventType, string> = {
   prazo_processual: 'bg-red-500/30 border-red-500/50 text-red-300',
   audiencia: 'bg-purple-500/30 border-purple-500/50 text-purple-300',
   reuniao: 'bg-blue-500/30 border-blue-500/50 text-blue-300',
+  atendimento: 'bg-cyan-500/30 border-cyan-500/50 text-cyan-300',
   tarefa: 'bg-orange-500/30 border-orange-500/50 text-orange-300'
 };
 const typeLabels: Record<LegalEventType, string> = {
-  prazo_processual: 'Prazo',
-  audiencia: 'Audiência',
-  reuniao: 'Reunião',
-  tarefa: 'Tarefa'
+  prazo_processual: 'calendar.type.deadline',
+  audiencia: 'calendar.type.hearing',
+  reuniao: 'calendar.type.meeting',
+  atendimento: 'calendar.type.attendance',
+  tarefa: 'calendar.type.task'
 };
 export function CalendarDayView({
   currentDate,
   events,
   onEventClick
 }: CalendarDayViewProps) {
+  const { t } = useLanguage();
   const dateStr = currentDate.toISOString().split('T')[0];
   const dayEvents = useMemo(() => {
     return events.filter((e) => dateStr >= e.dateStart && dateStr <= e.dateEnd);
@@ -90,7 +93,7 @@ export function CalendarDayView({
               }
             </div>
             <span className="text-sm text-text-secondary">
-              {dayEvents.length} evento{dayEvents.length !== 1 ? 's' : ''}
+                {dayEvents.length} {dayEvents.length === 1 ? (t('calendar.event') || 'event') : (t('calendar.events') || 'events')}
             </span>
           </div>
         </div>
@@ -98,7 +101,7 @@ export function CalendarDayView({
         {/* All-day events */}
         {allDayEvents.length > 0 &&
         <div className="p-4 border-b border-white/10 bg-white/[0.02]">
-            <div className="text-xs text-text-secondary mb-2">Dia todo</div>
+            <div className="text-xs text-text-secondary mb-2">{t('calendar.allDay') || 'All day'}</div>
             <div className="space-y-2">
               {allDayEvents.map((event) =>
             <button
@@ -192,12 +195,12 @@ export function CalendarDayView({
       {/* Event List Sidebar */}
       <div className="glass rounded-2xl border border-white/10 p-4 h-fit max-h-[calc(100vh-200px)] overflow-y-auto">
         <h3 className="text-lg font-semibold text-text-primary mb-4">
-          Eventos do Dia
+          {t('calendar.dayEvents') || 'Day Events'}
         </h3>
 
         {dayEvents.length === 0 ?
-        <p className="text-text-secondary text-sm text-center py-8">
-            Nenhum evento para este dia
+            <p className="text-text-secondary text-sm text-center py-8">
+            {t('common.noEvent')}
           </p> :
 
         <div className="space-y-3">

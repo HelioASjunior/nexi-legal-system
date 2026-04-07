@@ -23,6 +23,9 @@ dist-ssr
 *.sln
 *.sw?
 
+# Claude Code — configurações locais (permissões, preferências do usuário)
+.claude/
+
 # Environment and secrets
 .env
 .env.*
@@ -43,6 +46,9 @@ env/
 
 # Sensitive data dumps and exports
 *.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.sqlite-journal
 *.sqlite3
 *.db
 *.bak
@@ -50,6 +56,8 @@ env/
 *.xlsx
 *.xls
 *.csv
+docs/SQLITE-ACESSO-E-FUNCIONAMENTO.txt
+server/data/
 
 # Runtime/cache
 .cache/

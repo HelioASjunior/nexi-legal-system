@@ -1,269 +1,184 @@
+/**
+ * Repositório de usuários do sistema em memória.
+ * A fonte primária de dados é o banco SQLite via API REST; este módulo
+ * mantém um cache local para evitar round-trips desnecessários.
+ * Senhas NUNCA são armazenadas ou transmitidas pelo frontend — apenas hashes
+ * são processados pelo backend via bcrypt.
+ */
 import { AuthUser, AppRole } from '../types';
+import {
+  authenticateWithDatabase,
+  fetchUsersFromDatabase,
+  syncUsersToDatabase,
+  createUserInDatabase,
+  resetUserPasswordInDatabase,
+} from '../services/sqliteApi';
 
-// Passwords are encoded to avoid plaintext exposure in source code
-// In production, use bcrypt/argon2 server-side
-const _d = (s: string): string => {
-  try {
-    return atob(s);
-  } catch {
-    return '';
-  }
-};
-
-interface StoredUser extends AuthUser {
-  _k: string; // encoded credential
-}
-
-const initialUsers: StoredUser[] = [
-{
-  id: 'user-1',
-  name: 'Dr. Ricardo Mendes',
-  email: 'Admin',
-  role: 'administrador',
-  active: true,
-  _k: 'eGlub3FzMTg=',
-  createdAt: '2024-01-01'
-},
-{
-  id: 'user-2',
-  name: 'Dra. Camila Souza',
-  email: 'camila@escritorio.com',
-  role: 'advogado_total',
-  active: true,
-  _k: 'Y2FtaWxhMTIz',
-  createdAt: '2024-01-15'
-},
-{
-  id: 'user-3',
-  name: 'Dr. Fernando Lima',
-  email: 'fernando@escritorio.com',
-  role: 'advogado_senior',
-  active: true,
-  _k: 'ZmVybmFuZG8xMjM=',
-  createdAt: '2024-02-01'
-},
-{
-  id: 'user-4',
-  name: 'Dra. Juliana Costa',
-  email: 'juliana@escritorio.com',
-  role: 'advogado_junior',
-  active: true,
-  _k: 'anVsaWFuYTEyMw==',
-  createdAt: '2024-02-15'
-},
-{
-  id: 'user-5',
-  name: 'Ana Beatriz Santos',
-  email: 'ana@escritorio.com',
-  role: 'atendente',
-  active: true,
-  _k: 'YW5hMTIz',
-  createdAt: '2024-03-01'
-},
-{
-  id: 'user-6',
-  name: 'Carlos Pereira',
-  email: 'carlos@escritorio.com',
-  role: 'atendente',
-  active: false,
-  _k: 'Y2FybG9zMTIz',
-  createdAt: '2024-03-15'
-}];
-
-
-// Runtime user store (allows adding users at runtime)
-const USERS_STORAGE_KEY = 'crm_users_store';
-
-function loadUsers(): StoredUser[] {
-  try {
-    const stored = localStorage.getItem(USERS_STORAGE_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
-  } catch {
-
-    /* ignore */}
-  return [...initialUsers];
-}
-
-function saveUsers(users: StoredUser[]): void {
-  localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
-}
-
-// Initialize on first load
-let runtimeUsers: StoredUser[] = loadUsers();
+// Cache em memória de usuários (fonte primária: SQLite via API).
+// Senhas NUNCA são armazenadas no frontend.
+let runtimeUsers: AuthUser[] = [];
+let usersHydratedFromDb = false;
+let usersSyncTimer: number | null = null;
 
 /**
- * Get all users (without credentials)
+ * Reseta o flag de hidratação para forçar novo fetch na próxima chamada.
+ * Chamado no logout para garantir que o próximo login busque dados frescos.
+ */
+export function resetUserHydration(): void {
+  usersHydratedFromDb = false;
+  runtimeUsers = [];
+}
+
+function queueUsersSync() {
+  if (typeof window === 'undefined') return;
+  if (usersSyncTimer !== null) window.clearTimeout(usersSyncTimer);
+  usersSyncTimer = window.setTimeout(() => {
+    // Sync sem senhas — o backend preserva os hashes existentes.
+    void syncUsersToDatabase(runtimeUsers, true);
+  }, 350);
+}
+
+/**
+ * Projeta um objeto de usuário removendo campos extras que possam ter vindo do banco.
+ * Garante que apenas os campos definidos em AuthUser sejam retornados ao frontend.
+ * @param user - Objeto de usuário bruto do cache
+ * @returns AuthUser sem campos sensíveis extras
+ */
+function toAuthUser(user: AuthUser): AuthUser {
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    active: user.active,
+    createdAt: user.createdAt,
+  };
+}
+
+/**
+ * Retorna todos os usuários sem credenciais.
  */
 export function getAllUsers(): AuthUser[] {
-  runtimeUsers = loadUsers();
-  return runtimeUsers.map(({ _k, ...user }) => user);
+  return runtimeUsers.map(toAuthUser);
 }
 
 /**
- * Authenticate user with email/login and password
+ * Popula o cache de usuários a partir do banco de dados.
+ * Re-executa se ainda não hidratado ou se o cache estiver vazio.
  */
-export function authenticateUser(
-email: string,
-password: string)
-: {user: AuthUser;token: string;} | {error: string;} {
-  runtimeUsers = loadUsers();
-  const user = runtimeUsers.find(
-    (u) =>
-    u.email.toLowerCase() === email.toLowerCase() ||
-    u.name.toLowerCase() === email.toLowerCase()
-  );
+export async function hydrateUsersFromDatabase(): Promise<void> {
+  if (usersHydratedFromDb && runtimeUsers.length > 0) return;
 
-  if (!user) {
-    return { error: 'Usuário não encontrado. Verifique suas credenciais.' };
+  const usersFromDb = await fetchUsersFromDatabase();
+  if (usersFromDb.length > 0) {
+    runtimeUsers = usersFromDb;
+    usersHydratedFromDb = true;
   }
-
-  if (!user.active) {
-    return { error: 'Usuário inativo. Entre em contato com o administrador.' };
-  }
-
-  if (_d(user._k) !== password) {
-    return { error: 'Senha incorreta. Tente novamente.' };
-  }
-
-  const token = `mock-jwt-${user.id}-${Date.now()}`;
-  const { _k, ...userData } = user;
-  return { user: userData, token };
+  // Se retornou vazio (unauthenticated ou DB vazio), mantém flag false
+  // para tentar novamente após login.
 }
 
 /**
- * Get user by ID (for session restoration)
+ * Autentica o usuário via backend (bcrypt server-side).
+ */
+export async function authenticateUser(
+  email: string,
+  password: string
+): Promise<{ user: AuthUser; token: string } | { error: string }> {
+  return authenticateWithDatabase(email, password);
+}
+
+/**
+ * Busca usuário por ID no cache local (após autenticação).
  */
 export function getUserById(userId: string): AuthUser | null {
-  runtimeUsers = loadUsers();
   const user = runtimeUsers.find((u) => u.id === userId);
   if (!user || !user.active) return null;
-  const { _k, ...userData } = user;
-  return userData;
+  return toAuthUser(user);
 }
 
 /**
- * Create a new user (admin only)
+ * Cria novo usuário via backend (senha é hasheada server-side com bcrypt).
  */
-export function createUser(
-name: string,
-email: string,
-password: string,
-role: AppRole)
-: {user: AuthUser;} | {error: string;} {
-  runtimeUsers = loadUsers();
+export async function createUser(
+  name: string,
+  email: string,
+  password: string,
+  role: AppRole
+): Promise<{ user: AuthUser } | { error: string }> {
+  const result = await createUserInDatabase(name, email, password, role);
+  if ('error' in result) return result;
 
-  // Check for duplicate email
-  const existing = runtimeUsers.find(
-    (u) => u.email.toLowerCase() === email.toLowerCase()
-  );
-  if (existing) {
-    return { error: 'Já existe um usuário com este e-mail.' };
-  }
-
-  const newUser: StoredUser = {
-    id: `user-${Date.now()}`,
-    name,
-    email,
-    role,
-    active: true,
-    _k: btoa(password),
-    createdAt: new Date().toISOString().split('T')[0]
-  };
-
-  runtimeUsers.push(newUser);
-  saveUsers(runtimeUsers);
-
-  const { _k, ...userData } = newUser;
-  return { user: userData };
+  // Atualiza cache local sem armazenar senha.
+  runtimeUsers.push(result.user);
+  return result;
 }
 
 /**
- * Update user data (admin only)
+ * Atualiza dados do usuário (sem senha) no cache local e enfileira sincronização com o banco.
+ * Valida unicidade de e-mail antes de aplicar a alteração.
+ * @param userId - ID do usuário a atualizar
+ * @param data - Campos a atualizar (nome, e-mail e/ou cargo)
+ * @returns O usuário atualizado ou um objeto de erro
  */
 export function updateUser(
-userId: string,
-data: {name?: string;email?: string;role?: AppRole;})
-: {user: AuthUser;} | {error: string;} {
-  runtimeUsers = loadUsers();
+  userId: string,
+  data: { name?: string; email?: string; role?: AppRole }
+): { user: AuthUser } | { error: string } {
   const idx = runtimeUsers.findIndex((u) => u.id === userId);
-  if (idx === -1) {
-    return { error: 'Usuário não encontrado.' };
-  }
+  if (idx === -1) return { error: 'Usuário não encontrado.' };
 
-  // Check for duplicate email if email is being changed
-  if (
-  data.email &&
-  data.email.toLowerCase() !== runtimeUsers[idx].email.toLowerCase())
-  {
-    const existing = runtimeUsers.find(
-      (u) =>
-      u.email.toLowerCase() === data.email!.toLowerCase() && u.id !== userId
-    );
-    if (existing) {
-      return { error: 'Já existe um usuário com este e-mail.' };
-    }
+  const nextEmail = data.email?.toLowerCase();
+  if (nextEmail && nextEmail !== runtimeUsers[idx].email.toLowerCase()) {
+    // Garante que o novo e-mail não conflite com outro usuário existente.
+    const existing = runtimeUsers.find((u) => u.email.toLowerCase() === nextEmail && u.id !== userId);
+    if (existing) return { error: 'Já existe um usuário com este e-mail.' };
   }
 
   if (data.name) runtimeUsers[idx].name = data.name;
   if (data.email) runtimeUsers[idx].email = data.email;
   if (data.role) runtimeUsers[idx].role = data.role;
 
-  saveUsers(runtimeUsers);
-
-  const { _k, ...userData } = runtimeUsers[idx];
-  return { user: userData };
+  queueUsersSync();
+  return { user: toAuthUser(runtimeUsers[idx]) };
 }
 
 /**
- * Delete user (admin only)
+ * Remove usuário.
  */
 export function deleteUser(userId: string): boolean {
-  runtimeUsers = loadUsers();
   const idx = runtimeUsers.findIndex((u) => u.id === userId);
   if (idx === -1) return false;
-
   runtimeUsers.splice(idx, 1);
-  saveUsers(runtimeUsers);
+  queueUsersSync();
   return true;
 }
 
 /**
- * Update user role
+ * Atualiza role do usuário.
  */
 export function updateUserRole(userId: string, newRole: AppRole): boolean {
-  runtimeUsers = loadUsers();
   const idx = runtimeUsers.findIndex((u) => u.id === userId);
   if (idx === -1) return false;
   runtimeUsers[idx].role = newRole;
-  saveUsers(runtimeUsers);
+  queueUsersSync();
   return true;
 }
 
 /**
- * Toggle user active status
+ * Alterna status ativo/inativo.
  */
 export function toggleUserActive(userId: string): boolean {
-  runtimeUsers = loadUsers();
   const idx = runtimeUsers.findIndex((u) => u.id === userId);
   if (idx === -1) return false;
   runtimeUsers[idx].active = !runtimeUsers[idx].active;
-  saveUsers(runtimeUsers);
+  queueUsersSync();
   return true;
 }
 
 /**
- * Reset password (admin)
+ * Redefine senha via backend (bcrypt server-side).
  */
-export function resetUserPassword(
-userId: string,
-newPassword: string)
-: boolean {
-  runtimeUsers = loadUsers();
-  const idx = runtimeUsers.findIndex((u) => u.id === userId);
-  if (idx === -1) return false;
-  runtimeUsers[idx]._k = btoa(newPassword);
-  saveUsers(runtimeUsers);
-  return true;
+export async function resetUserPassword(userId: string, newPassword: string): Promise<boolean> {
+  return resetUserPasswordInDatabase(userId, newPassword);
 }

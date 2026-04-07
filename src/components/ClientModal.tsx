@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { PlusIcon, TrashIcon, SearchIcon } from 'lucide-react';
 import { Client, Installment, ClientRecord } from '../types';
 import { Modal } from './Modal';

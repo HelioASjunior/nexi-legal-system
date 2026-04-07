@@ -1,3 +1,10 @@
+/**
+ * Utilitários de proteção de dados pessoais (LGPD / GDPR).
+ * Fornece funções de mascaramento para exibição segura e sanitização de payloads
+ * de API antes de logging ou transmissão.
+ */
+
+/** Chaves de objeto cujos valores são considerados dados sensíveis e devem ser redigidos em logs. */
 const SENSITIVE_KEYS = new Set([
   'cpf',
   'cnpj',
@@ -14,6 +21,10 @@ const SENSITIVE_KEYS = new Set([
   'token'
 ]);
 
+/**
+ * Mascara um endereço de e-mail, exibindo apenas os 2 primeiros caracteres do alias.
+ * Exemplo: jo****@exemplo.com
+ */
 export function maskEmail(email?: string): string {
   if (!email) return '';
   const [local, domain] = email.split('@');
@@ -22,6 +33,10 @@ export function maskEmail(email?: string): string {
   return `${visible}${'*'.repeat(Math.max(2, local.length - 2))}@${domain}`;
 }
 
+/**
+ * Mascara um número de telefone, preservando o DDD e os 2 últimos dígitos.
+ * Exemplo: (11) *****-**99
+ */
 export function maskPhone(phone?: string): string {
   if (!phone) return '';
   const digits = phone.replace(/\D/g, '');
@@ -31,6 +46,10 @@ export function maskPhone(phone?: string): string {
   return `(${prefix}) *****-**${suffix}`;
 }
 
+/**
+ * Mascara um CPF/CNPJ, exibindo apenas os 4 últimos dígitos.
+ * Exemplo: ***.***.***-1234
+ */
 export function maskDocument(document?: string): string {
   if (!document) return '';
   const digits = document.replace(/\D/g, '');
@@ -39,6 +58,10 @@ export function maskDocument(document?: string): string {
   return `***.***.***-${suffix}`;
 }
 
+/**
+ * Mascara um número de cartão no formato PCI-DSS (exibe apenas primeiros e últimos 4 dígitos).
+ * Exemplo: 1234 **** **** 5678
+ */
 export function maskCardNumber(cardNumber?: string): string {
   if (!cardNumber) return '';
   const digits = cardNumber.replace(/\D/g, '');
@@ -48,6 +71,10 @@ export function maskCardNumber(cardNumber?: string): string {
   return `${first} **** **** ${last}`;
 }
 
+/**
+ * Mascara um nome completo, exibindo apenas as 2 primeiras letras de cada nome/sobrenome.
+ * Exemplo: "Jo*** S***"
+ */
 export function maskPersonName(name?: string): string {
   if (!name) return '';
   const parts = name.trim().split(/\s+/);
@@ -59,10 +86,17 @@ export function maskPersonName(name?: string): string {
   return `${first.slice(0, 2)}*** ${last.slice(0, 1)}***`;
 }
 
+/** Verifica se uma chave de objeto deve ter seu valor redigido nos logs. */
 function shouldSanitizeKey(key: string): boolean {
   return SENSITIVE_KEYS.has(key.toLowerCase());
 }
 
+/**
+ * Remove recursivamente dados sensíveis de um payload antes de logging ou transmissão.
+ * Campos sensíveis são substituídos por '[REDACTED]'.
+ * @param payload - Objeto, array ou valor primitivo a sanitizar
+ * @returns Cópia sanitizada do payload, sem modificar o original
+ */
 export function sanitizeApiPayload<T>(payload: T): T {
   if (Array.isArray(payload)) {
     return payload.map((item) => sanitizeApiPayload(item)) as T;

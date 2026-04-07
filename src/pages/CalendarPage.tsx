@@ -15,8 +15,7 @@ import {
   UsersIcon,
   ChevronDownIcon } from
 'lucide-react';
-import { LegalEvent, LegalEventStatus, CalendarViewMode } from '../types';
-import { mockLegalUsers } from '../data/legalMockData';
+import { LegalEvent, LegalEventStatus, CalendarViewMode, LegalUser } from '../types';
 import { isEventOverdue } from '../utils/legalDeadlines';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
@@ -25,6 +24,7 @@ import { CalendarMonthView } from '../components/calendar/CalendarMonthView';
 import { CalendarWeekView } from '../components/calendar/CalendarWeekView';
 import { CalendarDayView } from '../components/calendar/CalendarDayView';
 import { CalendarListView } from '../components/calendar/CalendarListView';
+import { CalendarDayTasksPanel } from '../components/calendar/CalendarDayTasksPanel';
 import {
   CalendarFilters,
   CalendarFiltersState } from
@@ -33,19 +33,20 @@ import { EventModal } from '../components/calendar/EventModal';
 import { EventDetailPanel } from '../components/calendar/EventDetailPanel';
 import { DeadlineCalculator } from '../components/calendar/DeadlineCalculator';
 import { getAllUsers } from '../data/authData';
+import { useLanguage } from '../context/LanguageContext';
 const MONTHS = [
-'Janeiro',
-'Fevereiro',
-'Março',
-'Abril',
-'Maio',
-'Junho',
-'Julho',
-'Agosto',
-'Setembro',
-'Outubro',
-'Novembro',
-'Dezembro'];
+  'reports.month.jan',
+  'reports.month.feb',
+  'reports.month.mar',
+  'reports.month.apr',
+  'reports.month.may',
+  'reports.month.jun',
+  'reports.month.jul',
+  'reports.month.aug',
+  'reports.month.sep',
+  'reports.month.oct',
+  'reports.month.nov',
+  'reports.month.dec'];
 
 const viewModeConfig: {
   id: CalendarViewMode;
@@ -54,30 +55,38 @@ const viewModeConfig: {
 }[] = [
 {
   id: 'month',
-  label: 'Mensal',
+  label: 'calendar.view.month',
   icon: <LayoutGridIcon className="w-4 h-4" />
 },
 {
   id: 'week',
-  label: 'Semanal',
+  label: 'calendar.view.week',
   icon: <CalendarIcon className="w-4 h-4" />
 },
 {
   id: 'day',
-  label: 'Diário',
+  label: 'calendar.view.day',
   icon: <ClockIcon className="w-4 h-4" />
 },
 {
   id: 'list',
-  label: 'Lista',
+  label: 'calendar.view.list',
   icon: <ListIcon className="w-4 h-4" />
 }];
 
 export function CalendarPage() {
+  const { t, language } = useLanguage();
   const { user } = useAuth();
   const { legalEvents, setLegalEvents, legalClients, legalProcesses } =
   useData();
-  const systemUsers = useMemo(() => getAllUsers(), []);
+  const systemUsers = useMemo<LegalUser[]>(() => getAllUsers().
+  filter((u) => u.active).
+  map((u) => ({
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    role: u.role === 'administrador' ? 'admin' : 'usuario'
+  })), []);
   const [viewMode, setViewMode] = useState<CalendarViewMode>('month');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -106,18 +115,17 @@ export function CalendarPage() {
   const [editingEvent, setEditingEvent] = useState<LegalEvent | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<LegalEvent | null>(null);
   const [isDetailPanelOpen, setIsDetailPanelOpen] = useState(false);
+  const [isDayTasksPanelOpen, setIsDayTasksPanelOpen] = useState(false);
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
   const currentLegalUserId = useMemo(() => {
-    if (!user) return null;
-    const legalUser = mockLegalUsers.find((lu) => lu.name === user.name);
-    return legalUser?.id || user.id;
+    return user?.id || null;
   }, [user]);
   const selectedUserName = useMemo(() => {
-    if (userFilter === 'mine') return 'Meus Eventos';
-    if (userFilter === 'all') return 'Todos os Eventos';
+    if (userFilter === 'mine') return t('calendar.myEvents');
+    if (userFilter === 'all') return t('calendar.allEvents');
     const selectedUser = systemUsers.find((u) => u.id === userFilter);
-    return selectedUser?.name || 'Funcionário';
-  }, [userFilter, systemUsers]);
+    return selectedUser?.name || t('calendar.employee');
+  }, [userFilter, systemUsers, t]);
   const filteredEvents = useMemo(() => {
     return legalEvents.filter((event) => {
       // User filter
@@ -148,11 +156,10 @@ export function CalendarPage() {
       if (filters.clientId && event.clientId !== filters.clientId) return false;
       if (filters.processId && event.processId !== filters.processId)
       return false;
-      if (
-      filters.responsibleId &&
-      event.responsibleId !== filters.responsibleId)
-
-      return false;
+      if (filters.responsibleId) {
+        const eventUserIds = event.responsibleIds || [event.responsibleId];
+        if (!eventUserIds.includes(filters.responsibleId)) return false;
+      }
       return true;
     });
   }, [legalEvents, searchTerm, filters, userFilter, currentLegalUserId]);
@@ -198,34 +205,40 @@ export function CalendarPage() {
   };
   const getPeriodLabel = () => {
     if (viewMode === 'month')
-    return `${MONTHS[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
+    return `${t(MONTHS[currentDate.getMonth()])} ${currentDate.getFullYear()}`;
     if (viewMode === 'week') {
       const startOfWeek = new Date(currentDate);
       startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
       const endOfWeek = new Date(startOfWeek);
       endOfWeek.setDate(endOfWeek.getDate() + 6);
-      return `${startOfWeek.getDate()} - ${endOfWeek.getDate()} de ${MONTHS[startOfWeek.getMonth()]} ${startOfWeek.getFullYear()}`;
+      return `${startOfWeek.getDate()} - ${endOfWeek.getDate()} ${t('common.of') || 'of'} ${t(MONTHS[startOfWeek.getMonth()])} ${startOfWeek.getFullYear()}`;
     }
     if (viewMode === 'day')
-    return currentDate.toLocaleDateString('pt-BR', {
+    return currentDate.toLocaleDateString(language === 'pt' ? 'pt-BR' : 'en-US', {
       weekday: 'long',
       day: 'numeric',
       month: 'long',
       year: 'numeric'
     });
-    return 'Agenda';
+    return t('calendar.agenda') || 'Agenda';
   };
   const handleDayClick = (date: Date) => {
     setSelectedDate(date);
     if (viewMode === 'month') {
-      setCurrentDate(date);
-      setViewMode('day');
+      setIsDayTasksPanelOpen(true);
     }
   };
   const handleEventClick = (event: LegalEvent) => {
+    setIsDayTasksPanelOpen(false);
     setSelectedEvent(event);
     setIsDetailPanelOpen(true);
   };
+
+  const selectedDateEvents = useMemo(() => {
+    if (!selectedDate) return [];
+    const dateStr = selectedDate.toISOString().split('T')[0];
+    return filteredEvents.filter((event) => dateStr >= event.dateStart && dateStr <= event.dateEnd);
+  }, [filteredEvents, selectedDate]);
   const handleSaveEvent = (
   eventData: Omit<LegalEvent, 'id' | 'createdAt' | 'updatedAt'> & {
     id?: string;
@@ -349,10 +362,10 @@ export function CalendarPage() {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 animate-fade-in">
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold text-[var(--text-primary)] mb-1">
-            Calendário Jurídico
+            {t('sidebar.calendar')}
           </h1>
           <p className="text-[var(--text-secondary)]">
-            Gerencie prazos, audiências, reuniões e tarefas
+            {t('calendar.subtitle') || 'Gerencie prazos, audiências, reuniões e tarefas'}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -361,7 +374,7 @@ export function CalendarPage() {
             icon={<CalculatorIcon className="w-5 h-5" />}
             onClick={() => setIsCalculatorOpen(true)}>
             
-            Calcular Prazo
+            {t('calendar.calculateDeadline') || 'Calcular Prazo'}
           </Button>
           <Button
             variant="primary"
@@ -371,7 +384,7 @@ export function CalendarPage() {
               setIsEventModalOpen(true);
             }}>
             
-            Novo Evento
+            {t('calendar.newEvent') || 'Novo Evento'}
           </Button>
         </div>
       </div>
@@ -384,7 +397,7 @@ export function CalendarPage() {
         }}>
         
         <span className="text-sm text-[var(--text-secondary)]">
-          Visualizar:
+          {t('calendar.viewAs') || 'Visualizar:'}
         </span>
         <div className="flex items-center gap-1 p-1 glass rounded-xl border border-[var(--glass-border)]">
           <button
@@ -392,14 +405,14 @@ export function CalendarPage() {
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${userFilter === 'mine' ? 'bg-[var(--accent-blue)]/20 text-[var(--accent-blue)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--glass-bg)]'}`}>
             
             <UserIcon className="w-4 h-4" />
-            Meus Eventos
+            {t('calendar.myEvents') || 'Meus Eventos'}
           </button>
           <button
             onClick={() => setUserFilter('all')}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${userFilter === 'all' ? 'bg-[var(--accent-blue)]/20 text-[var(--accent-blue)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--glass-bg)]'}`}>
             
             <UsersIcon className="w-4 h-4" />
-            Todos
+            {t('calendar.allEventsShort') || 'Todos'}
           </button>
 
           {/* Per-employee dropdown */}
@@ -412,7 +425,7 @@ export function CalendarPage() {
               <span className="hidden sm:inline">
                 {userFilter !== 'mine' && userFilter !== 'all' ?
                 selectedUserName :
-                'Funcionário'}
+                (t('calendar.employee') || 'Funcionário')}
               </span>
               <ChevronDownIcon className="w-4 h-4" />
             </button>
@@ -420,9 +433,7 @@ export function CalendarPage() {
             {showUserDropdown &&
             <>
                 <div className="absolute top-full left-0 mt-1 w-56 max-h-64 overflow-y-auto glass-strong rounded-xl border border-[var(--glass-border)] shadow-lg z-50">
-                  {systemUsers.
-                filter((u) => u.active).
-                map((u) =>
+                  {systemUsers.map((u) =>
                 <button
                   key={u.id}
                   onClick={() => {
@@ -458,7 +469,7 @@ export function CalendarPage() {
                 {stats.pendentes}
               </div>
               <div className="text-xs text-[var(--text-secondary)]">
-                Pendentes
+                {t('calendar.pending') || 'Pendentes'}
               </div>
             </div>
           </div>
@@ -473,7 +484,7 @@ export function CalendarPage() {
                 {stats.atrasados}
               </div>
               <div className="text-xs text-[var(--text-secondary)]">
-                Atrasados
+                {t('calendar.overdue') || 'Atrasados'}
               </div>
             </div>
           </div>
@@ -488,7 +499,7 @@ export function CalendarPage() {
                 {stats.concluidos}
               </div>
               <div className="text-xs text-[var(--text-secondary)]">
-                Concluídos
+                {t('calendar.completed') || 'Concluídos'}
               </div>
             </div>
           </div>
@@ -503,7 +514,7 @@ export function CalendarPage() {
                 {stats.thisWeek}
               </div>
               <div className="text-xs text-[var(--text-secondary)]">
-                Esta Semana
+                {t('calendar.thisWeek') || 'Esta Semana'}
               </div>
             </div>
           </div>
@@ -525,14 +536,14 @@ export function CalendarPage() {
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${viewMode === mode.id ? 'bg-[var(--accent-blue)]/20 text-[var(--accent-blue)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--glass-bg)]'}`}>
             
               {mode.icon}
-              <span className="hidden sm:inline">{mode.label}</span>
+              <span className="hidden sm:inline">{t(mode.label)}</span>
             </button>
           )}
         </div>
 
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" onClick={goToToday}>
-            Hoje
+            {t('calendar.today') || 'Today'}
           </Button>
           <div className="flex items-center gap-2">
             <button
@@ -559,7 +570,7 @@ export function CalendarPage() {
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Buscar eventos..."
+            placeholder={t('common.search')}
             className="w-full pl-10 pr-4 py-2 rounded-xl glass border border-[var(--glass-border)] text-[var(--text-primary)] placeholder-[var(--text-secondary)]/50 focus:outline-none focus:border-[var(--accent-blue)]/50" />
           
         </div>
@@ -577,7 +588,7 @@ export function CalendarPage() {
           onFilterChange={setFilters}
           clients={legalClients}
           processes={legalProcesses}
-          users={mockLegalUsers} />
+          users={systemUsers} />
         
       </div>
 
@@ -641,6 +652,13 @@ export function CalendarPage() {
         onDelete={handleDeleteEvent}
         onStatusChange={handleStatusChange}
         onLabelsChange={handleLabelsChange} />
+
+      <CalendarDayTasksPanel
+        isOpen={isDayTasksPanelOpen}
+        date={selectedDate}
+        events={selectedDateEvents}
+        onClose={() => setIsDayTasksPanelOpen(false)}
+        onEventClick={handleEventClick} />
       
       <DeadlineCalculator
         isOpen={isCalculatorOpen}

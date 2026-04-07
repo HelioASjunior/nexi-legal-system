@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   XIcon,
   PencilIcon,
@@ -16,17 +15,19 @@ import {
   TagIcon } from
 'lucide-react';
 import { LegalEvent, LegalEventType, LegalEventStatus } from '../../types';
+// TODO: substituir por useData().legalClients / .legalProcesses para exibir dados reais
 import {
   mockLegalClients,
-  mockLegalProcesses,
-  mockLegalUsers } from
+  mockLegalProcesses } from
 '../../data/legalMockData';
+import { getAllUsers } from '../../data/authData';
 import {
   isEventOverdue,
   isEventUrgent,
   formatDateBR } from
 '../../utils/legalDeadlines';
 import { Button } from '../Button';
+import { useLanguage } from '../../context/LanguageContext';
 interface EventDetailPanelProps {
   event: LegalEvent | null;
   isOpen: boolean;
@@ -37,15 +38,17 @@ interface EventDetailPanelProps {
   onLabelsChange?: (eventId: string, labels: LegalEventStatus[]) => void;
 }
 const typeLabels: Record<LegalEventType, string> = {
-  prazo_processual: 'Prazo Processual',
-  audiencia: 'Audiência',
-  reuniao: 'Reunião',
-  tarefa: 'Tarefa'
+  prazo_processual: 'calendar.type.deadline',
+  audiencia: 'calendar.type.hearing',
+  reuniao: 'calendar.type.meeting',
+  atendimento: 'calendar.type.attendance',
+  tarefa: 'calendar.type.task'
 };
 const typeColors: Record<LegalEventType, string> = {
   prazo_processual: 'bg-red-500',
   audiencia: 'bg-purple-500',
   reuniao: 'bg-blue-500',
+  atendimento: 'bg-cyan-500',
   tarefa: 'bg-orange-500'
 };
 const statusConfig: Record<
@@ -56,35 +59,35 @@ const statusConfig: Record<
   }> =
 {
   pendente: {
-    label: 'Pendente',
+    label: 'common.pending',
     color: 'bg-amber-500/20 text-amber-400 border-amber-500/30'
   },
   em_andamento: {
-    label: 'Em Andamento',
+    label: 'calendar.status.inProgress',
     color: 'bg-blue-500/20 text-blue-400 border-blue-500/30'
   },
   concluido: {
-    label: 'Concluído',
+    label: 'common.completed',
     color: 'bg-green-500/20 text-green-400 border-green-500/30'
   },
   aguardando_autorizacao: {
-    label: 'Aguardando Autorização',
+    label: 'calendar.status.waitingAuthorization',
     color: 'bg-purple-500/20 text-purple-400 border-purple-500/30'
   },
   aguardando_documentacao: {
-    label: 'Aguardando Documentação',
+    label: 'calendar.status.waitingDocumentation',
     color: 'bg-orange-500/20 text-orange-400 border-orange-500/30'
   },
   cartorio: {
-    label: 'Cartório',
+    label: 'calendar.status.registry',
     color: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30'
   },
   aguardando_correcao: {
-    label: 'Aguardando Correção',
+    label: 'calendar.status.waitingCorrection',
     color: 'bg-pink-500/20 text-pink-400 border-pink-500/30'
   },
   atrasado: {
-    label: 'Atrasado',
+    label: 'common.overdue',
     color: 'bg-red-500/20 text-red-400 border-red-500/30'
   }
 };
@@ -107,6 +110,7 @@ export function EventDetailPanel({
   onStatusChange,
   onLabelsChange
 }: EventDetailPanelProps) {
+  const { t } = useLanguage();
   if (!isOpen || !event) return null;
   const client = event.clientId ?
   mockLegalClients.find((c) => c.id === event.clientId) :
@@ -114,10 +118,16 @@ export function EventDetailPanel({
   const process = event.processId ?
   mockLegalProcesses.find((p) => p.id === event.processId) :
   null;
+  const usersById = new Map(getAllUsers().map((u) => [u.id, u]));
   const responsibleIds = event.responsibleIds || [event.responsibleId];
-  const responsibleUsers = responsibleIds.
-  map((id) => mockLegalUsers.find((u) => u.id === id)).
-  filter(Boolean);
+  const responsibleUsers = responsibleIds.flatMap((id) => {
+    const user = usersById.get(id);
+    return user ? [{
+      id: user.id,
+      name: user.name,
+      email: user.email
+    }] : [];
+  });
   // Get active labels (multi-select support)
   const activeLabels = event.labels || [event.status];
   const effectiveStatus: LegalEventStatus =
@@ -126,12 +136,11 @@ export function EventDetailPanel({
   isEventOverdue(event.dateEnd, event.status) ?
   'atrasado' :
   event.status;
-  const status = statusConfig[effectiveStatus];
   const overdue = effectiveStatus === 'atrasado';
   const urgent = isEventUrgent(event.dateEnd, event.status);
   const completed = event.status === 'concluido';
   const handleDelete = () => {
-    if (confirm('Tem certeza que deseja excluir este evento?')) {
+    if (confirm(t('calendar.confirmDelete') || 'Are you sure you want to delete this event?')) {
       onDelete(event.id);
       onClose();
     }
@@ -175,7 +184,7 @@ export function EventDetailPanel({
                 className={`w-3 h-3 rounded-full ${typeColors[event.type]}`} />
               
               <span className="text-sm text-text-secondary">
-                {typeLabels[event.type]}
+                {t(typeLabels[event.type])}
               </span>
             </div>
             <button
@@ -197,7 +206,7 @@ export function EventDetailPanel({
           <div className="space-y-3">
             <h3 className="text-sm font-medium text-text-secondary flex items-center gap-2">
               <TagIcon className="w-4 h-4" />
-              Etiquetas Ativas ({activeLabels.length})
+              {t('calendar.activeLabels') || 'Active Labels'} ({activeLabels.length})
             </h3>
             <div className="flex flex-wrap gap-2">
               {activeLabels.map((label) => {
@@ -207,7 +216,7 @@ export function EventDetailPanel({
                     key={label}
                     className={`px-3 py-1 rounded-full text-sm border ${config.color}`}>
                     
-                    {config.label}
+                    {t(config.label)}
                   </span>);
 
               })}
@@ -215,7 +224,7 @@ export function EventDetailPanel({
             {overdue && !completed &&
             <span className="flex items-center gap-1 text-sm text-red-400">
                 <AlertTriangleIcon className="w-4 h-4" />
-                Atrasado
+                {t('common.overdue')}
               </span>
             }
             {urgent && !overdue && !completed &&
@@ -245,7 +254,7 @@ export function EventDetailPanel({
                     `}>
                     
                     {isActive && <span className="mr-1">✓</span>}
-                    {config.label}
+                    {t(config.label)}
                   </button>);
 
               })}
@@ -271,7 +280,7 @@ export function EventDetailPanel({
             size="sm"
             onClick={() => handleLabelToggle('pendente')}>
             
-              Reabrir Evento
+                {t('calendar.reopenEvent') || 'Reopen Event'}
             </Button>
           }
 
@@ -354,12 +363,12 @@ export function EventDetailPanel({
             <div className="flex flex-wrap gap-2">
               {responsibleUsers.map((user) =>
               <div
-                key={user!.id}
+                key={user.id}
                 className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 border border-white/10">
                 
                   <div className="w-8 h-8 rounded-full bg-accent-blue/20 flex items-center justify-center">
                     <span className="text-xs font-medium text-accent-blue">
-                      {user!.name.
+                      {user.name.
                     split(' ').
                     map((n) => n[0]).
                     join('').
@@ -368,10 +377,10 @@ export function EventDetailPanel({
                   </div>
                   <div>
                     <div className="text-sm text-text-primary">
-                      {user!.name}
+                      {user.name}
                     </div>
                     <div className="text-xs text-text-secondary">
-                      {user!.email}
+                      {user.email}
                     </div>
                   </div>
                 </div>
@@ -428,14 +437,14 @@ export function EventDetailPanel({
               onClick={() => onEdit(event)}
               className="flex-1">
               
-              Editar
+              {t('common.edit')}
             </Button>
             <Button
               variant="danger"
               icon={<TrashIcon className="w-4 h-4" />}
               onClick={handleDelete}>
               
-              Excluir
+              {t('common.delete')}
             </Button>
           </div>
 

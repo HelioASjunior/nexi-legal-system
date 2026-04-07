@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef, createElement } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import {
   PlusIcon,
   SearchIcon,
@@ -20,6 +20,7 @@ import {
 import { ClientRecord } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
+import { useLanguage } from '../context/LanguageContext';
 import { hasPermission } from '../utils/auth';
 import { Button } from '../components/Button';
 import { Select } from '../components/Select';
@@ -87,8 +88,11 @@ const stateOptions = [
   label: 'Ceará'
 }];
 
+type MaritalStatus = 'solteiro' | 'casado' | 'divorciado' | 'viuvo' | 'uniao_estavel';
+
 export function NewClientsPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const { clientRecords, setClientRecords } = useData();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -115,6 +119,15 @@ export function NewClientsPage() {
     replace(/[\u0300-\u036f]/g, '').
     toLowerCase().
     trim();
+  };
+  const parseMaritalStatus = (value: string): MaritalStatus | undefined => {
+    const normalized = normalizeText(value);
+    if (normalized === 'solteiro') return 'solteiro';
+    if (normalized === 'casado') return 'casado';
+    if (normalized === 'divorciado') return 'divorciado';
+    if (normalized === 'viuvo') return 'viuvo';
+    if (normalized === 'uniaoestavel') return 'uniao_estavel';
+    return undefined;
   };
   const filteredClients = useMemo(() => {
     const normalizedSearch = normalizeText(searchTerm);
@@ -422,14 +435,16 @@ Status: ${c.status === 'ativo' ? 'Ativo' : 'Inativo'}
           getValueByAliases(row, ['status']) === 'inativo' ?
           'inativo' :
           'ativo';
+          const maritalStatus = parseMaritalStatus(
+            getValueByAliases(row, aliasMap.maritalStatus)
+          );
           const newClient: ClientRecord = {
             id: `cr-import-${Date.now()}-${index}`,
             name,
             cpf: getValueByAliases(row, aliasMap.cpf),
             rg: getValueByAliases(row, aliasMap.rg) || undefined,
             birthDate: getValueByAliases(row, aliasMap.birthDate) || undefined,
-            maritalStatus:
-            (getValueByAliases(row, aliasMap.maritalStatus) as any) || undefined,
+            maritalStatus,
             profession: getValueByAliases(row, aliasMap.profession) || undefined,
             phone: phone || undefined,
             whatsapp,
@@ -566,7 +581,7 @@ Status: ${c.status === 'ativo' ? 'Ativo' : 'Inativo'}
                 setSearchTerm(e.target.value);
                 setCurrentPage(1);
               }}
-              placeholder="Buscar por nome ou CPF..."
+              placeholder={t('common.searchByNameOrCpf') || 'Search by name or CPF...'}
               className="w-full pl-12 pr-4 py-2.5 rounded-xl glass border border-[var(--glass-border)] text-[var(--text-primary)] placeholder-[var(--text-secondary)]/50 focus:outline-none focus:border-[var(--accent-blue)]/50" />
             
           </div>
@@ -575,7 +590,7 @@ Status: ${c.status === 'ativo' ? 'Ativo' : 'Inativo'}
             icon={<FilterIcon className="w-5 h-5" />}
             onClick={() => setShowFilters(!showFilters)}>
             
-            Filtros
+            {t('common.filters') || 'Filters'}
             {hasActiveFilters &&
             <span className="ml-2 px-2 py-0.5 rounded-full bg-[var(--accent-blue)] text-white text-xs">
                 {[filterStatus, filterState].filter(Boolean).length}
@@ -655,7 +670,7 @@ Status: ${c.status === 'ativo' ? 'Ativo' : 'Inativo'}
                   colSpan={6}
                   className="p-8 text-center text-[var(--text-secondary)]">
                   
-                    Nenhum cliente encontrado
+                    {t('common.notFound')}
                   </td>
                 </tr> :
 
@@ -757,7 +772,7 @@ Status: ${c.status === 'ativo' ? 'Ativo' : 'Inativo'}
         <div className="lg:hidden divide-y divide-[var(--glass-border)]/50">
           {paginatedClients.length === 0 ?
           <div className="p-8 text-center text-[var(--text-secondary)]">
-              Nenhum cliente encontrado
+              {t('common.notFound')}
             </div> :
 
           paginatedClients.map((client) =>

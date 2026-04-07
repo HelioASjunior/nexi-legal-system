@@ -1,4 +1,3 @@
-import React from 'react';
 import { AlertTriangleIcon, CheckCircleIcon } from 'lucide-react';
 import { LegalEvent, LegalEventType } from '../../types';
 import { isEventOverdue, isEventUrgent } from '../../utils/legalDeadlines';
@@ -29,6 +28,11 @@ const typeColors: Record<
     bg: 'bg-blue-500/20',
     text: 'text-blue-400',
     border: 'border-blue-500/30'
+  },
+  atendimento: {
+    bg: 'bg-cyan-500/20',
+    text: 'text-cyan-400',
+    border: 'border-cyan-500/30'
   },
   tarefa: {
     bg: 'bg-orange-500/20',

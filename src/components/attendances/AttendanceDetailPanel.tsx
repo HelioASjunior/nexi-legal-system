@@ -14,7 +14,6 @@ import {
   PhoneCallIcon,
   UsersIcon,
   FileTextIcon,
-  PlusIcon,
   SendIcon,
   BriefcaseIcon } from
 'lucide-react';

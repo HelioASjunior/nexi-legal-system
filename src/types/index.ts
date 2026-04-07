@@ -2,6 +2,7 @@ export type TabType =
 'dashboard' |
 'clients_new' |
 'atendimentos' |
+'process_cases' |
 'financeiro' |
 'calendar' |
 'reports' |
@@ -179,6 +180,59 @@ export interface Client {
   whatsappHistory: WhatsAppLog[];
 }
 
+export type FinancialMovementDirection = 'entrada' | 'saida';
+
+export type FinancialMovementStatus = 'a_receber' | 'recebida';
+
+export type FinancialMovementType =
+'entrada_avulsa' |
+'adiantamento_despesa' |
+'honorario';
+
+export type FinancialMovementClassification =
+'Adiantamento de despesas' |
+'Aluguel' |
+'Anuidade OAB' |
+'COFINS' |
+'CSLL' |
+'Capitalização sócios' |
+'Condomínio' |
+'Contador' |
+'Despesa do cliente' |
+'GPS - INSS' |
+'Honorários' |
+'IPTU' |
+'IRRF' |
+'Impostos' |
+'Limpeza' |
+'Marketing' |
+'PIS' |
+'PróLabore' |
+'Rendimentos financeiros' |
+'Salários';
+
+export interface FinancialMovement {
+  id: string;
+  direction: FinancialMovementDirection;
+  status: FinancialMovementStatus;
+  receivedAt: string;
+  movementType: FinancialMovementType;
+  receivedFrom: string;
+  clientId?: string;
+  description: string;
+  amount: number;
+  documentNumber?: string;
+  classification: FinancialMovementClassification;
+  account: string;
+  repeatMonthly: boolean;
+  installmentCount?: number;
+  installmentIndex?: number;
+  installmentGroupId?: string;
+  printReceipt: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface CalendarNotice {
   id: string;
   date: string;
@@ -212,6 +266,7 @@ export type LegalEventType =
 'prazo_processual' |
 'audiencia' |
 'reuniao' |
+'atendimento' |
 'tarefa';
 
 export type LegalEventStatus =
@@ -246,6 +301,26 @@ export interface LegalProcess {
   client: string;
   tribunal: string;
   description: string;
+  title?: string;
+  label?: string;
+  instance?: '1_grau' | '2_grau' | 'superior' | 'supremo' | 'outra';
+  clientQualification?: string;
+  otherInvolvedName?: string;
+  otherInvolvedQualification?: string;
+  courtNumber?: string;
+  courtDivision?: string;
+  forum?: string;
+  action?: string;
+  tribunalLink?: string;
+  subject?: string;
+  claimValue?: number;
+  distributedAt?: string;
+  condemnationValue?: number;
+  notes?: string;
+  responsibleId?: string;
+  responsibleName?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface LegalEvent {

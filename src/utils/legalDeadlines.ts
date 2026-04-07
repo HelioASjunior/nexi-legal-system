@@ -1,8 +1,14 @@
+/**
+ * Utilitários de cálculo de prazos processuais conforme o CPC/2015.
+ * Prazos são contados em dias úteis, excluindo finais de semana e feriados nacionais.
+ * Feriados estaduais/municipais devem ser adicionados via parâmetro `holidays` nas funções.
+ */
 import { Holiday } from '../types';
 
 /**
- * Brazilian national holidays for 2024-2026
- * Can be extended with state/municipal holidays
+ * Feriados nacionais brasileiros para 2024-2026.
+ * Inclui feriados móveis (Carnaval, Corpus Christi, Sexta-feira Santa) calculados para cada ano.
+ * Pode ser estendido com feriados estaduais/municipais conforme necessidade do escritório.
  */
 export const NATIONAL_HOLIDAYS: Holiday[] = [
 // 2024
@@ -179,7 +185,7 @@ export function isEventOverdue(dateEnd: string, status: string): boolean {
 export function isEventUrgent(
 dateEnd: string,
 status: string,
-urgentThresholdDays: number = 3,
+urgentThresholdDays = 3,
 holidays: Holiday[] = NATIONAL_HOLIDAYS)
 : boolean {
   if (status === 'concluido') return false;

@@ -1,12 +1,21 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { LegalEvent, LegalEventType } from '../../types';
 import { NATIONAL_HOLIDAYS, getHolidayName } from '../../utils/legalDeadlines';
+import { useLanguage } from '../../context/LanguageContext';
 interface CalendarWeekViewProps {
   currentDate: Date;
   events: LegalEvent[];
   onEventClick: (event: LegalEvent) => void;
 }
-const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+const WEEKDAY_KEYS = [
+  'calendar.weekday.sun',
+  'calendar.weekday.mon',
+  'calendar.weekday.tue',
+  'calendar.weekday.wed',
+  'calendar.weekday.thu',
+  'calendar.weekday.fri',
+  'calendar.weekday.sat',
+];
 const HOURS = Array.from(
   {
     length: 14
@@ -17,6 +26,7 @@ const typeColors: Record<LegalEventType, string> = {
   prazo_processual: 'bg-red-500/30 border-red-500/50 text-red-300',
   audiencia: 'bg-purple-500/30 border-purple-500/50 text-purple-300',
   reuniao: 'bg-blue-500/30 border-blue-500/50 text-blue-300',
+  atendimento: 'bg-cyan-500/30 border-cyan-500/50 text-cyan-300',
   tarefa: 'bg-orange-500/30 border-orange-500/50 text-orange-300'
 };
 export function CalendarWeekView({
@@ -24,6 +34,7 @@ export function CalendarWeekView({
   events,
   onEventClick
 }: CalendarWeekViewProps) {
+  const { t } = useLanguage();
   const weekDays = useMemo(() => {
     const startOfWeek = new Date(currentDate);
     const dayOfWeek = startOfWeek.getDay();
@@ -80,7 +91,7 @@ export function CalendarWeekView({
       {/* Header with days */}
       <div className="grid grid-cols-8 border-b border-white/10">
         <div className="p-3 text-center text-sm font-medium text-text-secondary border-r border-white/10">
-          Hora
+          {t('calendar.hour') || 'Hour'}
         </div>
         {weekDays.map((date, index) => {
           const holidayName = getHolidayName(date, NATIONAL_HOLIDAYS);
@@ -93,7 +104,7 @@ export function CalendarWeekView({
               `}>
               
               <div className="text-sm font-medium text-text-secondary">
-                {WEEKDAYS[index]}
+                {t(WEEKDAY_KEYS[index])}
               </div>
               <div
                 className={`text-lg font-semibold ${isToday(date) ? 'text-accent-blue' : 'text-text-primary'}`}>
@@ -113,7 +124,7 @@ export function CalendarWeekView({
       {/* All-day events row */}
       <div className="grid grid-cols-8 border-b border-white/10 min-h-[60px]">
         <div className="p-2 text-xs text-text-secondary border-r border-white/10 flex items-center justify-center">
-          Dia todo
+          {t('calendar.allDay') || 'All day'}
         </div>
         {weekDays.map((date, index) => {
           const allDayEvents = getAllDayEvents(date);
