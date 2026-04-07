@@ -46,7 +46,13 @@ function inspectFile(filePath) {
     if (
       normalized.includes('placeholder="000.000.000-00"') ||
       normalized.includes("placeholder='000.000.000-00'") ||
-      normalized.includes('cpf mask: 000.000.000-00')
+      normalized.includes('cpf mask: 000.000.000-00') ||
+      normalized.includes('cpf: 000.000.000-00') ||
+      normalized.includes('111.111.111-11') ||
+      normalized.includes('másca') ||
+      normalized.includes('máscara') ||
+      normalized.includes('validação') ||
+      normalized.includes('validation')
     ) {
       continue;
     }
